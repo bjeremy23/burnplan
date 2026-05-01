@@ -839,11 +839,26 @@ function getWdTarget(age,sc,ret,infl){
 // If one account in a period runs dry, the other accounts in that period cover its shortfall.
 // After all scheduled accounts are dry, any remaining need comes from unscheduled accounts in entry order.
 function withdrawFromSchedule(accts,netWd,wdState,cfg){
-  if(netWd<=0)return{accts,wdState};
+  if(netWd<=0)return{accts,wdState,wdByType:{tradIRA:0,roth:0,taxable:0,cash:0}};
   let rem=netWd;
-  const periods=wdState.periods;
+  // Track how much is withdrawn from each tax treatment
+  const wdByType={tradIRA:0,roth:0,taxable:0,cash:0};
 
-  // Find active period
+  function typeKey(type){
+    if(type==='Tax-deferred')return'tradIRA';
+    if(type==='Tax-free (Roth)')return'roth';
+    if(type==='Taxable LTCG')return'taxable';
+    return'cash';
+  }
+
+  function takeFrom(idx,amount){
+    const take=Math.min(amount,accts[idx].balance);
+    accts[idx].balance=Math.max(0,accts[idx].balance-take);
+    wdByType[typeKey(accts[idx].type)]+=take;
+    return take;
+  }
+
+  const periods=wdState.periods;
   let activePeriodIdx=-1;
   for(let i=0;i<periods.length;i++){
     const p=periods[i];
@@ -853,10 +868,8 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
 
   if(activePeriodIdx>=0){
     const period=periods[activePeriodIdx];
-    // Try to withdraw from this period's accounts proportionally
     const allocations=period.allocs.filter(a=>a.pct>0);
     if(allocations.length>0){
-      // Each account covers its pct of rem. If it can't, others absorb the shortfall.
       let remaining=rem;
       let iterations=0;
       while(remaining>0.01&&iterations<20){
@@ -864,17 +877,14 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
         const available=allocations.map(a=>{const idx=accts.findIndex(ac=>ac.name===a.account);return idx>=0?accts[idx].balance:0;});
         const totalAvail=available.reduce((s,v)=>s+v,0);
         if(totalAvail<=0)break;
-        // Distribute proportionally by pct, capped by available balance
         const targets=allocations.map((a,i)=>Math.min(remaining*(a.pct/100),available[i]));
         const taken=targets.reduce((s,v)=>s+v,0);
-        targets.forEach((take,i)=>{const idx=accts.findIndex(ac=>ac.name===allocations[i].account);if(idx>=0){accts[idx].balance=Math.max(0,accts[idx].balance-take);}});
+        targets.forEach((take,i)=>{const idx=accts.findIndex(ac=>ac.name===allocations[i].account);if(idx>=0)takeFrom(idx,take);});
         remaining-=taken;
       }
       rem=Math.max(0,remaining);
     }
-    // Advance period elapsed time
     period.elapsed=(period.elapsed||0)+1;
-    // Advance to next period if duration met
     if(period.durType==='years'&&period.elapsed>=period.durYears){activePeriodIdx++;}
     else if(period.durType==='depleted'){
       const allDry=period.allocs.every(a=>{const idx=accts.findIndex(ac=>ac.name===a.account);return idx<0||accts[idx].balance<=0;});
@@ -883,26 +893,20 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
     wdState.currentPeriod=activePeriodIdx;
   }
 
-  // Fallback: draw from any remaining accounts not in schedule (or all if no schedule)
   if(rem>0.01){
     const scheduledAccounts=new Set((cfg.wdPeriods||[]).flatMap(p=>p.allocs.map(a=>a.account)));
     for(let i=0;i<accts.length&&rem>0.01;i++){
       if(scheduledAccounts.size>0&&scheduledAccounts.has(accts[i].name))continue;
-      const take=Math.min(rem,accts[i].balance);
-      accts[i].balance=Math.max(0,accts[i].balance-take);
-      rem-=take;
+      rem-=takeFrom(i,rem);
     }
-    // If still remaining (all scheduled depleted), draw from any account
     if(rem>0.01){
       for(let i=0;i<accts.length&&rem>0.01;i++){
-        const take=Math.min(rem,accts[i].balance);
-        accts[i].balance=Math.max(0,accts[i].balance-take);
-        rem-=take;
+        rem-=takeFrom(i,rem);
       }
     }
   }
 
-  return{accts,wdState};
+  return{accts,wdState,wdByType};
 }
 
 function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState){
@@ -929,15 +933,39 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState){
   const netWd=Math.max(0,wdAmt-totalIncome);
   const result=withdrawFromSchedule(accts,netWd,wdState,cfg);
   const finalAccts=result.accts;
-  let ordIncome=rmd+(roth?roth.amount:0);
-  const ssTaxPct=parseFloat(cfg.ss?.taxability)||85;
+  const wdByType=result.wdByType||{tradIRA:0,roth:0,taxable:0,cash:0};
+
+  // Ordinary income = trad IRA withdrawals (incl RMD + non-RMD) + roth conversion + SS taxable portion + taxable other income
+  // RMD already came out of trad IRA balance above, so wdByType.tradIRA captures all trad draws including RMD
+  // Add roth conversion amount (trad->roth conversion is also ordinary income)
+  let ordIncome=wdByType.tradIRA+(roth?roth.amount:0);
+
+  // SS: taxable portion
+  const ssTaxPct=cfg.ss?parseFloat(cfg.ss.taxability)||85:0;
   ordIncome+=ssIncome*ssTaxPct/100;
-  otherIncome.forEach(inc=>{if(inc.taxability.includes('100%'))ordIncome+=inc.amount;else if(inc.taxability.includes('85%'))ordIncome+=inc.amount*0.85;});
+
+  // Other income streams
+  otherIncome.forEach(inc=>{
+    if(inc.taxability.includes('100%'))ordIncome+=inc.amount;
+    else if(inc.taxability.includes('85%'))ordIncome+=inc.amount*0.85;
+  });
+
+  // Estimate federal income tax on ordinary income
   const taxable=Math.max(0,ordIncome-fp.stdDed);
-  const brackets=fp.status==='mfj'?[[23200,.1],[94300,.12],[201050,.22],[383900,.24],[487450,.32],[731200,.35],[Infinity,.37]]:[[11600,.1],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[609350,.35],[Infinity,.37]];
+  const brackets=fp.status==='mfj'
+    ?[[23200,.1],[94300,.12],[201050,.22],[383900,.24],[487450,.32],[731200,.35],[Infinity,.37]]
+    :[[11600,.1],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[609350,.35],[Infinity,.37]];
   let tax=0,prev=0;
   for(const[top,rate]of brackets){if(taxable<=prev)break;tax+=Math.min(taxable-prev,top-prev)*rate;prev=top;}
-  return{accts:finalAccts,tax:Math.round(tax),ssIncome,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdState:result.wdState};
+
+  // LTCG tax on taxable account withdrawals (simplified: 0%/15%/20% based on ordinary income)
+  const ltcgGain=wdByType.taxable;
+  if(ltcgGain>0){
+    const ltcgRate=ordIncome>553850?0.20:ordIncome>89250?0.15:0;
+    tax+=ltcgGain*ltcgRate;
+  }
+
+  return{accts:finalAccts,tax:Math.round(tax),ssIncome,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,wdState:result.wdState};
 }
 
 function makeWdState(cfg){
