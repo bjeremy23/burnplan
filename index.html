@@ -452,12 +452,16 @@ td.dep{color:var(--red)}
     </div>
     <div id="stress-test-defs">
       <div class="stress-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
-          <input type="text" value="2008-style crash" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;flex:1;color:var(--text);">
-          <div style="display:flex;gap:6px;"><button class="btn btn-sm btn-primary" onclick="runStressTest(this)">Run test</button><button class="btn btn-sm btn-danger" onclick="this.closest('.stress-card').remove()">Remove</button></div>
+        <div style="margin-bottom:10px;">
+          <label class="fl" style="color:var(--accent);">Test name</label>
+          <input type="text" value="2008-style crash" placeholder="e.g. Great Depression, 2008 crash, Double dip..." style="font-size:14px;font-weight:500;width:100%;">
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px;">
+          <button class="btn btn-sm btn-primary" onclick="runStressTest(this)">Run test</button>
+          <button class="btn btn-sm btn-danger" onclick="this.closest('.stress-card').remove()">Remove</button>
         </div>
         <div class="colhdr crash" style="display:grid;grid-template-columns:75px 65px 95px 1fr 24px;gap:7px;"><span>Year</span><span>Drop %</span><span>Recovery yrs</span><span>Notes</span><span></span></div>
-        <div class="crash-events"><div class="ri crash"><input type="number" value="2028"><input type="number" value="38"><input type="number" value="4"><input type="text" value="Market crash"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div></div>
+        <div class="crash-events" id="default-crash-events"></div>
         <button class="btn-link" onclick="addCrash(this)">+ Add crash event</button>
       </div>
     </div>
@@ -702,8 +706,52 @@ function addScenario(){
   </div>`;
   document.getElementById('extra-scenarios').appendChild(d);
 }
-function addCrash(btn){const d=document.createElement('div');d.className='ri crash';d.innerHTML='<input type="number" placeholder="Year"><input type="number" placeholder="%"><input type="number" placeholder="Yrs"><input type="text" placeholder="Notes"><button class="rmbtn" onclick="this.closest(\'.ri\').remove()">×</button>';btn.previousElementSibling.appendChild(d);}
-function addStressTest(){stressCount++;const d=document.createElement('div');d.className='stress-card';d.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;"><input type="text" value="Stress test ${stressCount}" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;flex:1;color:var(--text);"><div style="display:flex;gap:6px;"><button class="btn btn-sm btn-primary" onclick="runStressTest(this)">Run test</button><button class="btn btn-sm btn-danger" onclick="this.closest('.stress-card').remove()">Remove</button></div></div><div class="colhdr crash" style="display:grid;grid-template-columns:75px 65px 95px 1fr 24px;gap:7px;"><span>Year</span><span>Drop %</span><span>Recovery yrs</span><span>Notes</span><span></span></div><div class="crash-events"><div class="ri crash"><input type="number" placeholder="Year"><input type="number" placeholder="%"><input type="number" placeholder="Yrs"><input type="text" placeholder="Notes"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div></div><button class="btn-link" onclick="addCrash(this)">+ Add crash event</button>`;document.getElementById('stress-test-defs').appendChild(d);}
+function sortCrashEvents(container){
+  const rows=[...container.querySelectorAll('.ri.crash')];
+  if(rows.length<2)return;
+  rows.sort((a,b)=>{
+    const ay=parseInt(a.querySelector('input[type=number]').value)||0;
+    const by=parseInt(b.querySelector('input[type=number]').value)||0;
+    return ay-by;
+  });
+  rows.forEach(r=>container.appendChild(r));
+}
+
+function makeCrashRow(year,drop,yrs,notes){
+  const d=document.createElement('div');d.className='ri crash';
+  const yi=document.createElement('input');yi.type='number';yi.placeholder='Year';if(year)yi.value=year;
+  yi.addEventListener('change',()=>sortCrashEvents(d.closest('.crash-events')));
+  const di=document.createElement('input');di.type='number';di.placeholder='%';if(drop)di.value=drop;
+  const ri=document.createElement('input');ri.type='number';ri.placeholder='Yrs';if(yrs)ri.value=yrs;
+  const ni=document.createElement('input');ni.type='text';ni.placeholder='Notes';if(notes)ni.value=notes;
+  const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='\u00d7';btn.onclick=()=>d.remove();
+  [yi,di,ri,ni,btn].forEach(el=>d.appendChild(el));
+  return d;
+}
+
+function addCrash(btn){
+  const container=btn.previousElementSibling;
+  container.appendChild(makeCrashRow());
+}
+function addStressTest(){
+  stressCount++;
+  const d=document.createElement('div');d.className='stress-card';
+  d.innerHTML=`
+  <div style="margin-bottom:10px;">
+    <label class="fl" style="color:var(--accent);">Test name</label>
+    <input type="text" value="Stress test ${stressCount}" placeholder="e.g. 2008 crash, stagflation, double dip..." style="font-size:14px;font-weight:500;width:100%;">
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px;">
+    <button class="btn btn-sm btn-primary" onclick="runStressTest(this)">Run test</button>
+    <button class="btn btn-sm btn-danger" onclick="this.closest('.stress-card').remove()">Remove</button>
+  </div>
+  <div class="colhdr crash" style="display:grid;grid-template-columns:75px 65px 95px 1fr 24px;gap:7px;"><span>Year</span><span>Drop %</span><span>Recovery yrs</span><span>Notes</span><span></span></div>
+  <div class="crash-events"></div>
+  <button class="btn-link" onclick="addCrash(this)">+ Add crash event</button>`;
+  document.getElementById('stress-test-defs').appendChild(d);
+  // Add a blank crash row using makeCrashRow so sorting is wired up
+  d.querySelector('.crash-events').appendChild(makeCrashRow());
+}
 
 // ── Config reader ─────────────────────────────────────────────────────────────
 function readConfig(){
@@ -893,7 +941,8 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState){
 }
 
 function makeWdState(cfg){
-  return{periods:cfg.wdPeriods.map(p=>({...p,elapsed:0})),currentPeriod:0};}
+  return{periods:(cfg.wdPeriods||[]).map(p=>({...p,elapsed:0})),currentPeriod:0};
+}
 
 function simulate(cfg,scenario,offset=0,crashes=[]){
   const years=[];
@@ -1111,72 +1160,71 @@ function renderCompare(){
 }
 
 function runStressTest(btn){
-  if(!simData){alert('Run projections from Setup first.');return;}
+  if(!simData){
+    if(confirm('Projections must be run first. Go to Setup tab now?')){goTab('setup');}
+    return;
+  }
   const card=btn.closest('.stress-card');
-  const testName=card.querySelector('input[type=text]').value;
-  const crashes=[...card.querySelectorAll('.crash-events .ri')].map(r=>{
+  const testName=card.querySelector('input[type=text]').value||'Unnamed test';
+  const crashes=[...card.querySelectorAll('.crash-events .ri.crash')].map(r=>{
     const ins=r.querySelectorAll('input');
-    return{year:parseInt(ins[0].value),drop:parseFloat(ins[1].value)||0,recoveryYrs:parseInt(ins[2].value)||1,notes:ins[3].value};
-  }).filter(e=>e.year&&e.drop);
+    return{year:parseInt(ins[0]&&ins[0].value)||0,drop:parseFloat(ins[1]&&ins[1].value)||0,recoveryYrs:parseInt(ins[2]&&ins[2].value)||1,notes:(ins[3]&&ins[3].value)||''};
+  }).filter(e=>e.year>0&&e.drop>0);
+  if(crashes.length===0){alert('Add at least one crash event with a year and drop %.');return;}
   const cfg=simData.cfg;
   const mktView=document.getElementById('stress-mkt-view').value;
   const offsets={base:0,below:cfg.below,above:-cfg.above};
-
-  // Simulate stressed and unstressed for each selected market scenario
   const scenarios=mktView==='all3'
     ?[{key:'above',label:'Above avg',color:'#22c55e'},{key:'base',label:'Average',color:'#4f9cf9'},{key:'below',label:'Below avg',color:'#ef4444'}]
     :[{key:mktView,label:mktView==='below'?'Below avg':mktView==='above'?'Above avg':'Average',color:mktView==='below'?'#ef4444':mktView==='above'?'#22c55e':'#4f9cf9'}];
-
   stressData={testName,crashes,mktView,scenarios:scenarios.map(s=>({
     ...s,
     base:simulate(cfg,cfg.baseScenario,offsets[s.key],[]),
     stressed:simulate(cfg,cfg.baseScenario,offsets[s.key],crashes)
   }))};
-
   const firstBase=stressData.scenarios[0].base;
-  const labels=firstBase.map(r=>`${r.age}`);
-  document.getElementById('stress-title').textContent=`— ${testName} · ${mktView==='all3'?'all market scenarios':scenarios[0].label+' market'}`;
+  const labels=firstBase.map(r=>String(r.age));
+  document.getElementById('stress-title').textContent='— '+testName+' · '+(mktView==='all3'?'all market scenarios':scenarios[0].label+' market');
   document.getElementById('stress-chart-wrap').style.display='block';
   document.getElementById('stress-result-card').style.display='block';
-
-  // Build chart datasets — for each scenario show base (dashed) and stressed (solid)
   const datasets=[];
-  stressData.scenarios.forEach(s=>{
-    datasets.push({
-      label:`${s.label} — no crash`,
-      data:s.base.map(r=>Math.round(r.total)),
-      borderColor:s.color,borderWidth:1.5,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]
-    });
-    datasets.push({
-      label:`${s.label} — stressed`,
-      data:s.stressed.map(r=>Math.round(r.total)),
-      borderColor:s.color,borderWidth:2.5,pointRadius:0,fill:false,tension:.3
-    });
+  stressData.scenarios.forEach(function(s){
+    datasets.push({label:s.label+' — no crash',data:s.base.map(r=>Math.round(r.total)),borderColor:s.color,borderWidth:1.5,pointRadius:0,fill:false,tension:0.3,borderDash:[4,3]});
+    datasets.push({label:s.label+' — stressed',data:s.stressed.map(r=>Math.round(r.total)),borderColor:s.color,borderWidth:2.5,pointRadius:0,fill:false,tension:0.3});
   });
-
   destroyChart('stress-chart');
-  charts['stress-chart']=new Chart(document.getElementById('stress-chart'),{
-    type:'line',data:{labels,datasets},options:chartOpts()
-  });
-
-  // Result metrics — one row per scenario
-  const metricsHTML=stressData.scenarios.map(s=>{
+  charts['stress-chart']=new Chart(document.getElementById('stress-chart'),{type:'line',data:{labels:labels,datasets:datasets},options:chartOpts()});
+  const metricsEl=document.getElementById('stress-metrics');
+  metricsEl.innerHTML='';
+  stressData.scenarios.forEach(function(s){
     const lb=s.base[s.base.length-1];
     const ls=s.stressed[s.stressed.length-1];
     const diff=ls.total-lb.total;
-    const ruinBase=s.base.find(r=>r.total<=0);
-    const ruinStress=s.stressed.find(r=>r.total<=0);
-    return`<div style="margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:500;color:${s.color};margin-bottom:7px;">${s.label} market</div>
-      <div class="metrics-row" style="grid-template-columns:repeat(4,1fr);">
-        <div class="metric-card"><div class="metric-lbl">No crash — end</div><div class="metric-val g">${fmt(lb.total)}</div><div style="font-size:11px;color:var(--muted);margin-top:3px;">Ruin: ${ruinBase?'Age '+ruinBase.age:'Never'}</div></div>
-        <div class="metric-card"><div class="metric-lbl">Stressed — end</div><div class="metric-val ${ls.total>0?'a':'r'}">${fmt(ls.total)}</div><div style="font-size:11px;color:var(--muted);margin-top:3px;">Ruin: ${ruinStress?'Age '+ruinStress.age:'Never'}</div></div>
-        <div class="metric-card"><div class="metric-lbl">Impact of crash</div><div class="metric-val ${diff>=0?'g':'r'}">${diff>=0?'+':''}${fmt(diff)}</div></div>
-        <div class="metric-card"><div class="metric-lbl">Crash events</div><div class="metric-val" style="font-size:14px;">${crashes.map(c=>c.drop+'% drop').join(', ')||'—'}</div></div>
-      </div>
-    </div>`;
-  }).join('');
-  document.getElementById('stress-metrics').innerHTML=metricsHTML;
+    const ruinBase=s.base.find(function(r){return r.total<=0;});
+    const ruinStress=s.stressed.find(function(r){return r.total<=0;});
+    const section=document.createElement('div');
+    section.style.marginBottom='12px';
+    const heading=document.createElement('div');
+    heading.style.cssText='font-size:12px;font-weight:500;margin-bottom:7px;color:'+s.color;
+    heading.textContent=s.label+' market';
+    const grid=document.createElement('div');
+    grid.className='metrics-row';
+    grid.style.gridTemplateColumns='repeat(4,1fr)';
+    function mc(lbl,val,cls,sub){
+      const c=document.createElement('div');c.className='metric-card';
+      const l=document.createElement('div');l.className='metric-lbl';l.textContent=lbl;
+      const v=document.createElement('div');v.className='metric-val'+(cls?' '+cls:'');v.textContent=val;
+      c.appendChild(l);c.appendChild(v);
+      if(sub){const s=document.createElement('div');s.style.cssText='font-size:11px;color:var(--muted);margin-top:3px;';s.textContent=sub;c.appendChild(s);}
+      return c;
+    }
+    grid.appendChild(mc('No crash — end',fmt(lb.total),'g','Ruin: '+(ruinBase?'Age '+ruinBase.age:'Never')));
+    grid.appendChild(mc('Stressed — end',fmt(ls.total),ls.total>0?'a':'r','Ruin: '+(ruinStress?'Age '+ruinStress.age:'Never')));
+    grid.appendChild(mc('Impact of crash',(diff>=0?'+':'')+fmt(diff),diff>=0?'g':'r'));
+    grid.appendChild(mc('Crash events',crashes.map(function(c){return c.drop+'% drop';}).join(', ')||'—'));
+    section.appendChild(heading);section.appendChild(grid);
+    metricsEl.appendChild(section);
+  });
 }
 
 function saveStressResult(){
@@ -1474,6 +1522,9 @@ function esc(str){return(str||'').replace(/"/g,'\u0026quot;').replace(/</g,'\u00
 
 updateMode();
 renderSaved();
+// Initialize default stress test crash row
+const defaultCrashContainer=document.getElementById('default-crash-events');
+if(defaultCrashContainer) defaultCrashContainer.appendChild(makeCrashRow(2028,38,4,'Market crash'));
 </script>
 
 <!-- Footer -->
