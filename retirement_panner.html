@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RetirePlan — Free Retirement Calculator & Planner</title>
+<meta name="description" content="Free retirement planning calculator. Project account balances, model Social Security, stress test market crashes, and compare withdrawal scenarios across below, average, and above market conditions.">
+<meta name="keywords" content="retirement calculator, retirement planner, 401k calculator, Social Security calculator, portfolio withdrawal, retirement income planning">
+<meta property="og:title" content="RetirePlan — Free Retirement Calculator">
+<meta property="og:description" content="Project your retirement portfolio, model SS income, stress test market crashes, and compare withdrawal strategies. Free and private — runs entirely in your browser.">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://yourdomain.com/retirement_planner.html">
+
+<!-- Google AdSense — replace ca-pub-XXXXXXXXXXXXXXXX with your publisher ID -->
+<!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3347;--accent:#4f9cf9;--accent2:#7c3aed;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--text:#e8eaf0;--muted:#8892a4;--faint:#3a4055;--font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:210px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.sidebar-logo .lt{font-size:15px;font-weight:600;letter-spacing:-0.3px}
+.sidebar-logo .ls{font-size:11px;color:var(--muted);margin-top:2px}
+.nav-section{padding:12px 16px 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--accent);background:rgba(79,156,249,.08);border-left-color:var(--accent)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.main-header{padding:18px 26px 0;border-bottom:1px solid var(--border)}
+.page-title{font-size:20px;font-weight:600;letter-spacing:-.3px;margin-bottom:2px}
+.page-sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+.tabs-bar{display:flex}
+.tab-btn{padding:9px 16px;font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;font-family:var(--font)}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.sub-tabs-bar{display:flex;gap:4px;margin-bottom:18px}
+.sub-tab-btn{padding:5px 14px;font-size:12px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.sub-tab-btn:hover{color:var(--text)}
+.sub-tab-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(79,156,249,.08)}
+.tab-content{display:none;padding:22px 26px;flex:1}
+.tab-content.active{display:block}
+.sub-tab{display:none}
+.sub-tab.active{display:block}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.panel-hdr{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.panel-hdr:hover{background:var(--surface2)}
+.panel-hdr.open{border-bottom:1px solid var(--border)}
+.panel-title{font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
+.panel-body{padding:14px 16px}
+.chev{color:var(--muted);transition:transform .2s;font-size:11px}
+.chev.open{transform:rotate(180deg)}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.badge-req{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
+.badge-opt{background:rgba(136,146,164,.12);color:var(--muted);border:1px solid var(--border)}
+.badge-pre{background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.25)}
+.fl{font-size:12px;color:var(--muted);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.05em}
+.fhint{font-size:11px;color:var(--faint);font-style:italic}
+.fg{margin-bottom:11px}
+input[type=number],input[type=text],select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;padding:7px 9px;transition:border-color .15s;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+input::placeholder{color:var(--faint)}
+select option{background:var(--surface2)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:11px}
+.btn{padding:7px 14px;border-radius:6px;font-size:13px;font-family:var(--font);font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);transition:all .15s}
+.btn:hover{background:var(--faint)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#3b88e8}
+.btn-danger{background:rgba(239,68,68,.12);color:#f87171;border-color:rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:4px 0;font-family:var(--font)}
+.btn-link:hover{text-decoration:underline}
+.ri{display:grid;gap:7px;align-items:center;margin-bottom:7px}
+.ri.acct{grid-template-columns:1fr 110px 130px 24px}
+.ri.contrib{grid-template-columns:1fr 95px 95px 100px 24px}
+.ri.roth{grid-template-columns:65px 65px 1fr 100px 24px}
+.ri.crash{grid-template-columns:75px 65px 95px 1fr 24px}
+.colhdr{display:grid;gap:7px;margin-bottom:4px}
+.colhdr span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rmbtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0;line-height:1;transition:color .15s}
+.rmbtn:hover{color:var(--red)}
+.filing-row{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:11px;margin-bottom:7px}
+.fr-grid{display:grid;grid-template-columns:85px 1fr 135px;gap:9px;align-items:end}
+.std-ded-disp{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:13px;color:var(--accent);font-family:var(--mono)}
+/* Withdrawal schedule - period-based */
+.wd-period{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;position:relative}
+.wd-period-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.wd-period-num{width:22px;height:22px;border-radius:50%;background:var(--accent2);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wd-period-name{flex:1;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--text);padding:0}
+.wd-period-dur{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.wd-period-dur input[type=number]{width:60px;text-align:center}
+.wd-period-dur select{width:130px}
+.wd-period-dur span{font-size:11px;color:var(--muted);white-space:nowrap}
+.wd-alloc-row{display:grid;grid-template-columns:1fr 80px 24px;gap:7px;align-items:center;margin-bottom:6px}
+.wd-alloc-hdrs{display:grid;grid-template-columns:1fr 80px 24px;gap:7px;margin-bottom:5px}
+.wd-alloc-hdrs span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.pct-input{text-align:center;font-family:var(--mono);font-weight:500}
+.pct-total{font-size:12px;margin-top:6px;padding:5px 9px;border-radius:5px;display:inline-flex;align-items:center;gap:5px}
+.pct-ok{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.pct-warn{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.wd-conn{text-align:center;font-size:11px;color:var(--muted);padding:3px;margin:-4px 0}
+.wd-fallback-note{font-size:11px;color:var(--muted);font-style:italic;margin-top:6px;padding:5px 9px;background:rgba(79,156,249,.07);border-radius:5px;border:1px solid rgba(79,156,249,.15)}
+input.greyed,select.greyed{opacity:.35;pointer-events:none}
+.income-card{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:11px;margin-bottom:7px}
+.income-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.income-tag{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3)}
+.ss-tag{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
+.scenario-card{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:11px;margin-bottom:7px}
+.scenario-card.base{border-color:var(--accent)}
+.stress-card{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:11px;margin-bottom:7px}
+.mode-msg{font-size:12px;padding:7px 11px;border-radius:6px;margin-top:9px}
+.mode-pre{background:rgba(34,197,94,.08);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.mode-ret{background:rgba(245,158,11,.08);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.proj-ctrls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.proj-ctrls select{width:auto}
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:18px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px}
+.metric-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.metric-val{font-size:21px;font-weight:600;font-family:var(--mono);letter-spacing:-.5px}
+.metric-val.g{color:var(--green)}
+.metric-val.r{color:var(--red)}
+.metric-val.a{color:var(--amber)}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:14px}
+.chart-title{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:11px;display:flex;justify-content:space-between;align-items:center}
+.chart-canvas-wrap{position:relative;height:300px}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:520px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{position:sticky;top:0;background:var(--surface2);z-index:2}
+th{padding:8px 9px;text-align:right;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap}
+th:first-child,th:nth-child(2),th:nth-child(3),th:nth-child(4){text-align:left}
+td{padding:6px 9px;text-align:right;border-bottom:1px solid rgba(46,51,71,.5);font-family:var(--mono);white-space:nowrap}
+td:first-child,td:nth-child(2),td:nth-child(3),td:nth-child(4){text-align:left;font-family:var(--font)}
+tr:hover td{background:rgba(79,156,249,.04)}
+tr.phase-break td{border-top:1px solid var(--accent2)}
+.pos{color:var(--green)}.neg{color:var(--red)}.zer{color:var(--muted)}
+td.ab{color:var(--accent)}
+td.dep{color:var(--red)}
+.stress-run-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:14px}
+.saved-item{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;margin-bottom:7px}
+.val-err{font-size:12px;color:#f87171;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:7px 11px;margin-bottom:11px;display:none}
+.info-note{font-size:11px;color:var(--muted);margin-top:5px;font-style:italic}
+.ad-slot{background:var(--surface);border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;text-align:center;overflow:hidden}
+.ad-slot-sidebar{width:100%;min-height:250px;margin:8px 0}
+.ad-slot-banner{width:100%;min-height:90px;margin-bottom:14px}
+.ad-slot-inline{width:100%;min-height:280px;margin:14px 0}
+.ad-label{font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:3px}
+.disclaimer-bar{background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.2);padding:8px 26px;font-size:11px;color:#fbbf24;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.disclaimer-bar a{color:#fbbf24;text-decoration:underline}
+.footer-bar{background:var(--surface);border-top:1px solid var(--border);padding:12px 26px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0}
+.footer-bar a{color:var(--muted);text-decoration:none}
+.footer-bar a:hover{color:var(--text)}
+.empty-state{padding:40px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+</style>
+</head>
+<body>
+
+<!-- Disclaimer bar -->
+<div class="disclaimer-bar">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <span><strong>For educational purposes only.</strong> RetirePlan is not financial advice. Projections are estimates based on assumptions you provide and do not guarantee future results. <a href="privacy.html" target="_blank">Privacy policy</a> · <a href="privacy.html#disclaimer" target="_blank">Full disclaimer</a></span>
+</div>
+
+<div class="app">
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="lt">RetirePlan</div><div class="ls">Personal financial planner</div></div>
+  <div class="nav-section">Plan setup</div>
+  <div class="nav-item active" onclick="goTab('setup')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Setup</div>
+  <div class="nav-section">Analysis</div>
+  <div class="nav-item" onclick="goTab('proj')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Projections</div>
+  <div class="nav-item" onclick="goTab('compare')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Compare scenarios</div>
+  <div class="nav-item" onclick="goTab('stress')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Stress tests</div>
+  <div class="nav-section">Saved</div>
+  <div class="nav-item" onclick="goTab('saved')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Saved results</div>
+
+  <!-- Sidebar ad slot — 250x250 or 300x600 works well here -->
+  <div style="padding:12px;margin-top:auto;">
+    <span class="ad-label">Advertisement</span>
+    <div class="ad-slot ad-slot-sidebar">
+      <!-- AdSense unit — replace with your ad code -->
+      <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" data-ad-slot="XXXXXXXXXX" data-ad-format="auto"></ins> -->
+      <span style="font-size:11px;color:var(--faint);">Ad space<br>250×250</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+<div class="main-header">
+  <div class="page-title" id="ptitle">Setup &amp; assumptions</div>
+  <div class="page-sub" id="psub">Configure your accounts, assumptions, and income streams</div>
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="goTab('setup')">Setup</button>
+    <button class="tab-btn" onclick="goTab('proj')">Projections</button>
+    <button class="tab-btn" onclick="goTab('compare')">Compare</button>
+    <button class="tab-btn" onclick="goTab('stress')">Stress tests</button>
+    <button class="tab-btn" onclick="goTab('saved')">Saved</button>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="tab-content active" id="tab-setup">
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Basic information <span class="badge badge-req">required</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">Current age can equal or exceed retirement age — works for pre-retired and already-retired users.</p>
+    <div class="g4">
+      <div class="fg"><label class="fl">Current age</label><input type="number" id="cur-age" value="35" min="18" max="100" oninput="updateMode()"></div>
+      <div class="fg"><label class="fl">Retirement age</label><input type="number" id="ret-age" value="65" min="18" max="100" oninput="updateMode()"></div>
+      <div class="fg"><label class="fl">Plan through age <span class="fhint">default 95</span></label><input type="number" id="end-age" value="95"></div>
+      <div class="fg"><label class="fl">RMD start age <span class="fhint">default 73</span></label><input type="number" id="rmd-age" value="73"></div>
+    </div>
+    <div id="mode-msg" class="mode-msg mode-pre">Pre-retirement mode — contributions section is active.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Accounts <span class="badge badge-req">required</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">If no withdrawal schedule is set, accounts are drawn in entry order until depleted.</p>
+    <div class="colhdr acct" style="display:grid;grid-template-columns:1fr 110px 130px 24px;gap:7px;"><span>Account name</span><span>Balance ($)</span><span>Tax treatment</span><span></span></div>
+    <div id="accts"></div>
+    <button class="btn-link" onclick="addAcct()">+ Add account</button>
+  </div>
+</div>
+
+<div class="panel" id="contrib-panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Pre-retirement contributions <span class="badge badge-pre">pre-retirement only</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Contributions stop at retirement age. Leave blank if already retired.</p>
+    <div class="colhdr contrib" style="display:grid;grid-template-columns:1fr 95px 95px 100px 24px;gap:7px;"><span>Account</span><span>Annual ($)</span><span>Employer match ($)</span><span>Stop at</span><span></span></div>
+    <div id="contrib-entries"></div>
+    <button class="btn-link" onclick="addContrib()">+ Add contribution</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Market assumptions <span class="badge badge-req">required</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">Standard defaults pre-filled — adjust only what differs.</p>
+    <div class="g3">
+      <div class="fg"><label class="fl">Inflation % <span class="fhint">default 3.0%</span></label><input type="number" id="infl" value="3.0" step="0.1"></div>
+      <div class="fg"><label class="fl">Stock return % <span class="fhint">default 7.0%</span></label><input type="number" id="stock" value="7.0" step="0.1"></div>
+      <div class="fg"><label class="fl">Bond return % <span class="fhint">default 4.67%</span></label><input type="number" id="bond" value="4.67" step="0.1"></div>
+    </div>
+    <div class="g4">
+      <div class="fg"><label class="fl">Starting stock blend % <span class="fhint">default 70%</span></label><input type="number" id="blend-start" value="70" step="1"></div>
+      <div class="fg"><label class="fl">Ending stock blend % <span class="fhint">default 50%</span></label><input type="number" id="blend-end" value="50" step="1"></div>
+      <div class="fg"><label class="fl">Below avg subtract % <span class="fhint">default 2%</span></label><input type="number" id="below" value="2.0" step="0.1"></div>
+      <div class="fg"><label class="fl">Above avg add % <span class="fhint">default 2%</span></label><input type="number" id="above" value="2.0" step="0.1"></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Filing status timeline <span class="badge badge-req">required</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Start with your initial status. Standard deduction auto-fills. Add periods when status changes.</p>
+    <div id="filing-periods">
+      <div class="filing-row">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:7px;">Initial status — from plan start</div>
+        <div class="fr-grid">
+          <div></div>
+          <div><label class="fl">Filing status</label><select class="fp-sel" onchange="updDed(this)"><option value="single">Single</option><option value="mfj" selected>Married filing jointly</option><option value="mfs">Married filing separately</option><option value="hoh">Head of household</option></select></div>
+          <div><label class="fl">Std deduction (auto)</label><div class="std-ded-disp">$32,200</div></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-link" onclick="addFilingPeriod()">+ Add status change at a later age</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Social Security <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">SS is a lifetime benefit — no end age. Enter your estimated benefit in <strong style="color:var(--text);">today's dollars at your current age</strong> (as shown on ssa.gov). COLA will be applied from your current age forward, so by the time you claim at your chosen start age the benefit will already reflect years of cost-of-living increases. Leave all fields blank to exclude.</p>
+    <div class="income-card" style="border-color:rgba(34,197,94,.2);">
+      <div class="income-hdr">
+        <div style="display:flex;align-items:center;gap:8px;"><span class="income-tag ss-tag">Social Security</span><input type="text" id="ss-name" value="My SS benefit" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:170px;color:var(--text);"></div>
+        <span style="font-size:11px;color:var(--muted);">Lifetime — no end age</span>
+      </div>
+      <div class="g3">
+        <div class="fg" style="margin:0;"><label class="fl">SS start age</label><input type="number" id="ss-start" value="67"></div>
+        <div class="fg" style="margin:0;"><label class="fl">Annual benefit (today's $)</label><input type="number" id="ss-amt" placeholder="e.g. 61000"></div>
+        <div class="fg" style="margin:0;"><label class="fl">COLA % <span class="fhint">blank=0%</span></label><input type="number" id="ss-cola" value="3.3" step="0.1"></div>
+      </div>
+      <div style="margin-top:9px;"><label class="fl">Taxability</label><select id="ss-tax" style="width:auto;max-width:270px;"><option>85% taxable (standard SS rule)</option><option>50% taxable (lower income)</option><option>Tax-free (below threshold)</option></select></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Other income streams <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Pension, annuity, rental, part-time work, spousal SS, etc. Each reduces portfolio withdrawal while active.</p>
+    <div id="income-streams"></div>
+    <button class="btn-link" onclick="addIncome()">+ Add income stream</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Roth conversions <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Select your marginal tax bracket — the app computes the estimated dollar tax cost.</p>
+    <div class="colhdr roth" style="display:grid;grid-template-columns:65px 65px 1fr 100px 24px;gap:7px;"><span>From age</span><span>To age</span><span>Annual amount ($)</span><span>Tax bracket</span><span></span></div>
+    <div id="roth-entries">
+      <div class="ri roth"><input type="number" value="35" placeholder="From age"><input type="number" value="35" placeholder="To age"><input type="number" placeholder="$/yr"><select><option>10%</option><option>12%</option><option>22%</option><option selected>24%</option><option>32%</option><option>35%</option><option>37%</option></select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div>
+    </div>
+    <button class="btn-link" onclick="addRoth()">+ Add conversion period</button>
+    <p class="info-note">Tax cost = conversion amount × bracket %. Shown in table as amount, bracket %, and computed $ cost.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Withdrawal schedule <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:4px;">Define periods in order — they run <strong style="color:var(--text);">sequentially</strong>. Each period runs until its duration ends, then the next begins.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;"><strong style="color:var(--text);">Fixed years</strong> — move to the next period after N years regardless of account balance. <strong style="color:var(--text);">Until depleted</strong> — stay in this period until all its accounts are empty, then move to the next. Every period runs until its accounts are dry either way. If an account within a period runs out, the others absorb its share. When all period accounts are exhausted, any remaining need draws from accounts not in the schedule.</p>
+    <div id="wd-periods"></div>
+    <button class="btn-link" onclick="addWdPeriod()">+ Add withdrawal period</button>
+    <p id="wd-note" class="info-note" style="margin-top:8px;">No periods defined — will draw accounts in entry order until depleted.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Withdrawal scenarios <span class="badge badge-req">at least one required</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">Total annual spending target. SS and other income reduce how much comes from your portfolio. Base plan required.</p>
+    <div id="val-err" class="val-err">Base plan withdrawal amount is required.</div>
+    <div class="scenario-card base">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;"><span class="badge badge-req">Base plan</span><span style="font-size:12px;color:var(--muted);">Required</span></div>
+      <div class="fg" style="margin-bottom:11px;">
+        <label class="fl" style="color:var(--accent);">Plan name <span style="color:var(--muted);font-style:italic;text-transform:none;letter-spacing:0;font-weight:400;">(shows in Projections &amp; Compare dropdowns)</span></label>
+        <input type="text" id="base-lbl" value="Base plan" oninput="refreshScenarioDropdown()" placeholder="e.g. Conservative spend" style="font-size:14px;font-weight:500;">
+      </div>
+      <div class="g2">
+        <div class="fg" style="margin:0;"><label class="fl">Annual spend target ($)</label><input type="number" id="base-amt" placeholder="e.g. 100000"></div>
+        <div class="fg" style="margin:0;"><label class="fl">Duration</label><select id="base-dur" onchange="document.getElementById('base-stepdown').style.display=this.value==='c'?'block':'none'"><option value="all">All years</option><option value="c">Custom step-down</option></select></div>
+      </div>
+      <div id="base-stepdown" style="display:none;margin-top:9px;padding-top:9px;border-top:1px solid var(--border);">
+        <div class="g2" style="margin-bottom:7px;"><div><label class="fl">First period amount ($)</label><input type="number" id="base-a1" placeholder="e.g. 120000"></div><div><label class="fl">For how many years</label><input type="number" id="base-y1" placeholder="e.g. 10"></div></div>
+        <div class="g2"><div><label class="fl">Then amount ($/yr)</label><input type="number" id="base-a2" placeholder="e.g. 100000"></div><div><label class="fl">Remaining years</label><input type="text" value="All remaining" disabled style="opacity:.5;"></div></div>
+      </div>
+    </div>
+    <div id="extra-scenarios"></div>
+    <button class="btn-link" onclick="addScenario()" style="margin-top:7px;">+ Add comparison scenario</button>
+  </div>
+</div>
+
+<div style="display:flex;gap:9px;margin-top:7px;padding-bottom:22px;">
+  <button class="btn btn-primary" onclick="runProjections()">Run projections →</button>
+  <button class="btn" onclick="exportSettings()" title="Save all setup fields to a JSON file">Export settings</button>
+  <label class="btn" style="cursor:pointer;" title="Load a previously exported settings file">
+    Import settings
+    <input type="file" accept=".json" onchange="importSettings(event)" style="display:none;">
+  </label>
+  <button class="btn" onclick="if(confirm('Reset all inputs?'))location.reload()">Reset all</button>
+</div>
+</div>
+
+<!-- PROJECTIONS -->
+<div class="tab-content" id="tab-proj">
+  <div class="proj-ctrls">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:12px;color:var(--muted);">Plan:</label>
+      <select id="proj-sc-sel" onchange="renderProjections()" style="width:auto;"></select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:12px;color:var(--muted);">Market view:</label>
+      <select id="proj-view" onchange="renderProjections()" style="width:auto;">
+        <option value="base">Average market (base)</option>
+        <option value="below">Below average market</option>
+        <option value="above">Above average market</option>
+        <option value="all3">All three — compare bands</option>
+      </select>
+    </div>
+    <button class="btn btn-sm" onclick="exportCSV()">Export CSV</button>
+  </div>
+  <div id="proj-empty" class="empty-state">Run projections from the Setup tab first.</div>
+  <div id="proj-results" style="display:none;">
+    <div class="metrics-row" id="metrics-row"></div>
+    <div class="sub-tabs-bar">
+      <button class="sub-tab-btn active" onclick="switchSubTab('chart',this)">Chart</button>
+      <button class="sub-tab-btn" onclick="switchSubTab('balances',this)">Account balances table</button>
+    </div>
+    <div class="sub-tab active" id="sub-chart">
+      <div class="chart-wrap">
+        <div class="chart-title">Portfolio balance by account <span style="display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportPNG('main-chart')">PNG</button></span></div>
+        <div class="chart-canvas-wrap"><canvas id="main-chart"></canvas></div>
+      </div>
+      <div class="chart-wrap" id="income-chart-wrap" style="display:none;">
+        <div class="chart-title">Income streams vs portfolio withdrawal <span style="display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportPNG('income-chart')">PNG</button></span></div>
+        <div class="chart-canvas-wrap" style="height:200px;"><canvas id="income-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="sub-tab" id="sub-balances">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Year-by-year account balances and total portfolio value for each year of the plan.</p>
+      <div class="table-wrap"><table><thead id="bal-thead"></thead><tbody id="bal-tbody"></tbody></table></div>
+    </div>
+    <!-- Inline ad slot — 728x90 leaderboard or responsive works well between chart and table -->
+    <div style="margin:4px 0 14px;">
+      <span class="ad-label">Advertisement</span>
+      <div class="ad-slot ad-slot-banner">
+        <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" data-ad-slot="XXXXXXXXXX" data-ad-format="auto" data-full-width-responsive="true"></ins> -->
+        <span style="font-size:11px;color:var(--faint);">Ad space — 728×90 leaderboard</span>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:14px;"><table><thead id="proj-thead"></thead><tbody id="proj-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- COMPARE -->
+<div class="tab-content" id="tab-compare">
+  <div id="compare-empty" class="empty-state" style="display:none;">Run projections from the Setup tab first, then add comparison scenarios to see them here.</div>
+  <div id="compare-results" style="display:none;">
+    <div class="proj-ctrls" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:var(--muted);">Market view:</label>
+        <select id="compare-mkt-view" onchange="renderCompare()" style="width:auto;">
+          <option value="base">Average market</option>
+          <option value="below">Below average market</option>
+          <option value="above">Above average market</option>
+        </select>
+      </div>
+      <button class="btn btn-sm" onclick="exportPNG('compare-chart')">Chart PNG</button>
+    </div>
+    <div class="chart-wrap"><div class="chart-title" id="compare-chart-title">Total portfolio — scenario comparison · avg market</div><div class="chart-canvas-wrap" style="height:320px;"><canvas id="compare-chart"></canvas></div></div>
+    <div id="compare-metrics" class="metrics-row" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));"></div>
+  </div>
+</div>
+
+<!-- STRESS TESTS -->
+<div class="tab-content" id="tab-stress">
+  <div class="stress-run-card">
+    <div style="font-size:13px;font-weight:500;margin-bottom:11px;">Define &amp; run stress tests</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:13px;">Each test can have multiple crash events. Run against any market scenario — below avg, average, or above avg — to see how a crash plays out under different conditions.</p>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:13px;">
+      <label style="font-size:12px;color:var(--muted);">Market scenario:</label>
+      <select id="stress-mkt-view" style="width:auto;">
+        <option value="base">Average market</option>
+        <option value="below">Below average market</option>
+        <option value="above">Above average market</option>
+        <option value="all3">All three — compare</option>
+      </select>
+    </div>
+    <div id="stress-test-defs">
+      <div class="stress-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+          <input type="text" value="2008-style crash" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;flex:1;color:var(--text);">
+          <div style="display:flex;gap:6px;"><button class="btn btn-sm btn-primary" onclick="runStressTest(this)">Run test</button><button class="btn btn-sm btn-danger" onclick="this.closest('.stress-card').remove()">Remove</button></div>
+        </div>
+        <div class="colhdr crash" style="display:grid;grid-template-columns:75px 65px 95px 1fr 24px;gap:7px;"><span>Year</span><span>Drop %</span><span>Recovery yrs</span><span>Notes</span><span></span></div>
+        <div class="crash-events"><div class="ri crash"><input type="number" value="2028"><input type="number" value="38"><input type="number" value="4"><input type="text" value="Market crash"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div></div>
+        <button class="btn-link" onclick="addCrash(this)">+ Add crash event</button>
+      </div>
+    </div>
+    <button class="btn" style="margin-top:11px;" onclick="addStressTest()">+ Add stress test</button>
+  </div>
+  <div class="chart-wrap" id="stress-chart-wrap" style="display:none;">
+    <div class="chart-title">Stress test result <span id="stress-title" style="font-size:11px;color:var(--muted);"></span></div>
+    <div class="chart-canvas-wrap" style="height:280px;"><canvas id="stress-chart"></canvas></div>
+  </div>
+  <div class="stress-run-card" id="stress-result-card" style="display:none;">
+    <div style="font-size:13px;font-weight:500;margin-bottom:9px;">Result summary</div>
+    <div id="stress-metrics"></div>
+    <div style="display:flex;gap:7px;margin-top:11px;">
+      <button class="btn btn-sm btn-primary" onclick="saveStressResult()">Save this result</button>
+      <button class="btn btn-sm" onclick="exportPNG('stress-chart')">Export PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVED -->
+<div class="tab-content" id="tab-saved">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div style="font-size:13px;font-weight:500;">Saved results</div>
+    <button class="btn btn-sm btn-danger" onclick="clearAllSaved()">Clear all</button>
+  </div>
+  <div id="saved-list"></div>
+  <div id="saved-empty" class="empty-state">No saved results yet. Run a stress test and save the result.</div>
+</div>
+
+</div>
+</div>
+
+<script>
+const DEDS={single:'$16,100',mfj:'$32,200',mfs:'$16,100',hoh:'$23,200'};
+const DEDV={single:16100,mfj:32200,mfs:16100,hoh:23200};
+const IRS={73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.4,82:18.5,83:17.7,84:16.8,85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2,91:11.5,92:10.8,93:10.1,94:9.5,95:8.9};
+const COLORS=['#4f9cf9','#22c55e','#f59e0b','#a78bfa','#f97316','#ec4899','#06b6d4','#84cc16'];
+let simData=null,charts={},stressData=null,wdPeriodCount=0,scCount=0,stressCount=1;
+
+const TITLES={setup:'Setup & assumptions',proj:'Projections',compare:'Compare scenarios',stress:'Stress tests',saved:'Saved results'};
+const SUBS={setup:'Configure accounts, assumptions and income streams',proj:'Year-by-year projection with market scenarios',compare:'Overlay multiple withdrawal scenarios',stress:'Simulate market crashes and recoveries',saved:'Saved stress tests and snapshots'};
+
+function goTab(id){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('ptitle').textContent=TITLES[id]||id;
+  document.getElementById('psub').textContent=SUBS[id]||'';
+  const tabBtns=document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(b=>{if(b.textContent.trim().toLowerCase().startsWith((TITLES[id]||'').split(' ')[0].toLowerCase()))b.classList.add('active');});
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
+  if(id==='proj'&&simData)renderProjections();
+  if(id==='compare'&&simData)renderCompare();
+  if(id==='saved')renderSaved();
+}
+
+function switchSubTab(id,btn){
+  document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sub-tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sub-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='chart'&&simData)setTimeout(renderChart,50);
+}
+
+function togglePanel(hdr){
+  const body=hdr.nextElementSibling,ch=hdr.querySelector('.chev'),open=body.style.display!=='none';
+  body.style.display=open?'none':'';hdr.classList.toggle('open',!open);ch.classList.toggle('open',!open);
+}
+
+function updateMode(){
+  const cur=parseInt(document.getElementById('cur-age').value)||35;
+  const ret=parseInt(document.getElementById('ret-age').value)||65;
+  const retired=cur>=ret;
+  const msg=document.getElementById('mode-msg'),panel=document.getElementById('contrib-panel');
+  if(retired){msg.className='mode-msg mode-ret';msg.textContent='Already retired — contributions section is inactive.';panel.style.opacity='0.45';panel.style.pointerEvents='none';}
+  else{msg.className='mode-msg mode-pre';msg.textContent='Pre-retirement mode — contributions will grow until retirement age.';panel.style.opacity='1';panel.style.pointerEvents='';}
+}
+
+function updDed(sel){const fp=sel.closest('.filing-row'),el=fp?.querySelector('.std-ded-disp');if(el)el.textContent=DEDS[sel.value]||'';}
+function addAcct(){
+  const d=document.createElement('div');d.className='ri acct';
+  const ni=document.createElement('input');ni.type='text';ni.placeholder='Account name';
+  const bi=document.createElement('input');bi.type='number';bi.placeholder='Balance';
+  const sel=document.createElement('select');
+  ['Tax-deferred','Tax-free (Roth)','Taxable LTCG','Cash/MM'].forEach(t=>{const o=document.createElement('option');o.textContent=t;sel.appendChild(o);});
+  const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='×';
+  btn.onclick=()=>d.remove();
+  [ni,bi,sel,btn].forEach(el=>d.appendChild(el));
+  document.getElementById('accts').appendChild(d);
+}
+function getAcctNames(){return[...document.querySelectorAll('#accts .ri')].map(r=>r.querySelector('input[type=text]').value||'Account');}
+function addContrib(){const opts=getAcctNames().map(n=>`<option>${n}</option>`).join('');const d=document.createElement('div');d.className='ri contrib';d.innerHTML=`<select>${opts}</select><input type="number" placeholder="e.g. 23000"><input type="number" placeholder="e.g. 5000"><select><option>At retirement</option><option>Age 60</option><option>Age 62</option><option>Age 65</option><option>Age 70</option></select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;document.getElementById('contrib-entries').appendChild(d);}
+function addFilingPeriod(){
+  const curAge=parseInt(document.getElementById('cur-age').value)||35;
+  const defaultAge=curAge+1;
+  const d=document.createElement('div');d.className='filing-row';
+  d.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><span style="font-size:11px;color:var(--muted);">Status change</span><button class="rmbtn" onclick="this.closest('.filing-row').remove()">×</button></div><div class="fr-grid"><div><label class="fl">From age</label><input type="number" value="${defaultAge}" style="width:100%;"></div><div><label class="fl">New filing status</label><select class="fp-sel" onchange="updDed(this)"><option value="single">Single</option><option value="mfj" selected>Married filing jointly</option><option value="mfs">Married filing separately</option><option value="hoh">Head of household</option></select></div><div><label class="fl">Std deduction</label><div class="std-ded-disp">$32,200</div></div></div>`;
+  document.getElementById('filing-periods').appendChild(d);
+}
+function addIncome(){const d=document.createElement('div');d.className='income-card';d.innerHTML=`<div class="income-hdr"><div style="display:flex;align-items:center;gap:8px;"><select style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);width:auto;"><option>Pension</option><option>Annuity</option><option>Rental income</option><option>Part-time work</option><option>Spousal SS</option><option>Other</option></select><input type="text" placeholder="Stream name" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:150px;color:var(--text);"></div><button class="rmbtn" onclick="this.closest('.income-card').remove()">×</button></div><div class="g4"><div><label class="fl">Start age</label><input type="number" placeholder="e.g. 65"></div><div><label class="fl">End age <span class="fhint">blank=forever</span></label><input type="number" placeholder="leave blank"></div><div><label class="fl">Annual $ (today's $)</label><input type="number" placeholder="e.g. 36000"></div><div><label class="fl">COLA % <span class="fhint">blank=0%</span></label><input type="number" placeholder="0" step="0.1"></div></div><div class="g2" style="margin-top:9px;"><div><label class="fl">Taxability</label><select><option>100% taxable (ordinary income)</option><option>85% taxable (SS standard)</option><option>Tax-free</option><option>LTCG rates</option></select></div><div><label class="fl">Notes</label><input type="text" placeholder="optional"></div></div>`;document.getElementById('income-streams').appendChild(d);}
+function addRoth(){
+  const curAge=parseInt(document.getElementById('cur-age').value)||35;
+  const d=document.createElement('div');d.className='ri roth';
+  d.innerHTML=`<input type="number" value="${curAge}" placeholder="From age"><input type="number" value="${curAge}" placeholder="To age"><input type="number" placeholder="$/yr"><select><option>10%</option><option>12%</option><option>22%</option><option selected>24%</option><option>32%</option><option>35%</option><option>37%</option></select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+  document.getElementById('roth-entries').appendChild(d);
+}
+
+// ── Withdrawal period builder ─────────────────────────────────────────────────
+function addWdPeriod(){
+  wdPeriodCount++;
+  document.getElementById('wd-note').style.display='none';
+  const container=document.getElementById('wd-periods');
+  if(document.querySelectorAll('.wd-period').length>0){const c=document.createElement('div');c.className='wd-conn';c.textContent='then ↓';container.appendChild(c);}
+  const num=document.querySelectorAll('.wd-period').length+1;
+  const acctOpts=getAcctNames().map(n=>`<option>${n}</option>`).join('');
+  const d=document.createElement('div');d.className='wd-period';d.id='wdp-'+wdPeriodCount;
+  d.innerHTML=`
+  <div class="wd-period-hdr">
+    <div class="wd-period-num">${num}</div>
+    <input class="wd-period-name" type="text" value="Period ${num}" placeholder="Period name">
+    <div class="wd-period-dur">
+      <input type="number" min="1" placeholder="yrs" class="wd-dur-yrs" oninput="syncPeriodDur(this,'yrs');checkPctTotal(this);" title="Number of years for this period">
+      <span>or</span>
+      <select class="wd-dur-sel" onchange="syncPeriodDur(this,'sel');checkPctTotal(this);">
+        <option value="">— pick —</option>
+        <option value="depleted" selected>Until depleted</option>
+      </select>
+    </div>
+    <button class="rmbtn" onclick="removeWdPeriod(this)" title="Remove period">×</button>
+  </div>
+  <div class="wd-alloc-hdrs"><span>Account</span><span style="text-align:center;">% of net need</span><span></span></div>
+  <div class="wd-allocs">
+    <div class="wd-alloc-row">
+      <select class="wd-acct-sel" onchange="checkPctTotal(this)">${acctOpts}</select>
+      <input type="number" class="pct-input wd-pct" min="0" max="100" placeholder="100" oninput="checkPctTotal(this)">
+      <button class="rmbtn" onclick="removeAllocRow(this)">×</button>
+    </div>
+  </div>
+  <button class="btn-link" onclick="addAllocRow(this)" style="margin-top:4px;">+ Add account</button>
+  <div class="pct-total pct-ok" id="pct-total-${d.id}" style="margin-top:6px;">Total: 0% of net need</div>
+  <div class="wd-fallback-note">If any account runs dry mid-period, its share is automatically covered by the other accounts in this period. When all period accounts are exhausted, remaining need is drawn from accounts not yet in the schedule.</div>`;
+  container.appendChild(d);
+  renumberPeriods();
+}
+
+function addAllocRow(btn){
+  const allocs=btn.previousElementSibling.previousElementSibling;
+  const period=btn.closest('.wd-period');
+  const currentTotal=[...period.querySelectorAll('.wd-pct')].reduce((s,i)=>s+(parseFloat(i.value)||0),0);
+  if(currentTotal>=100){
+    const totalEl=period.querySelector('[id^="pct-total-"]');
+    if(totalEl){totalEl.className='pct-total pct-warn';totalEl.textContent='Already at 100% — cannot add another account to this period.';}
+    return;
+  }
+  const remaining=Math.round(100-currentTotal);
+  const acctOpts=getAcctNames().map(n=>`<option>${n}</option>`).join('');
+  const d=document.createElement('div');d.className='wd-alloc-row';
+  d.innerHTML=`<select class="wd-acct-sel" onchange="checkPctTotal(this)">${acctOpts}</select><input type="number" class="pct-input wd-pct" min="0" max="${remaining}" value="${remaining}" oninput="checkPctTotal(this)"><button class="rmbtn" onclick="removeAllocRow(this)">×</button>`;
+  allocs.appendChild(d);
+  checkPctTotal(d.querySelector('.wd-pct'));
+}
+
+function removeAllocRow(btn){
+  const row=btn.closest('.wd-alloc-row');
+  const period=row.closest('.wd-period');
+  row.remove();
+  checkPctTotal(period.querySelector('.wd-pct'));
+}
+
+function removeWdPeriod(btn){
+  const p=btn.closest('.wd-period');
+  const prev=p.previousElementSibling,next=p.nextElementSibling;
+  if(prev&&prev.classList.contains('wd-conn'))prev.remove();
+  else if(next&&next.classList.contains('wd-conn'))next.remove();
+  p.remove();
+  renumberPeriods();
+  if(!document.querySelector('.wd-period'))document.getElementById('wd-note').style.display='';
+}
+
+function renumberPeriods(){
+  document.querySelectorAll('.wd-period-num').forEach((el,i)=>el.textContent=i+1);
+}
+
+function syncPeriodDur(el,src){
+  const period=el.closest('.wd-period');
+  const yrsIn=period.querySelector('.wd-dur-yrs');
+  const sel=period.querySelector('.wd-dur-sel');
+  if(src==='yrs'){const h=yrsIn.value&&parseInt(yrsIn.value)>0;sel.classList.toggle('greyed',h);if(h)sel.value='';}
+  else{const h=sel.value!=='';yrsIn.classList.toggle('greyed',h);if(h)yrsIn.value='';}
+}
+
+function checkPctTotal(el){
+  const period=el?.closest('.wd-period');if(!period)return;
+  const pcts=[...period.querySelectorAll('.wd-pct')].map(i=>parseFloat(i.value)||0);
+  const total=pcts.reduce((a,b)=>a+b,0);
+  const totalEl=period.querySelector('[id^="pct-total-"]');
+  if(!totalEl)return;
+  const over=total>100+0.01;
+  const ok=Math.abs(total-100)<0.01||total===0;
+  totalEl.className='pct-total '+(over?'pct-warn':ok?'pct-ok':'pct-warn');
+  if(over)totalEl.textContent=`Total: ${total.toFixed(0)}% — over 100%, reduce allocations`;
+  else if(ok||total===0)totalEl.textContent=`Total: ${total.toFixed(0)}% of net need`;
+  else totalEl.textContent=`Total: ${total.toFixed(0)}% — must equal 100% (${(100-total).toFixed(0)}% unallocated)`;
+  // Clamp each input's max so user can't type over 100 total
+  const pctInputs=[...period.querySelectorAll('.wd-pct')];
+  pctInputs.forEach(inp=>{
+    const others=pctInputs.filter(x=>x!==inp).reduce((s,x)=>s+(parseFloat(x.value)||0),0);
+    inp.max=Math.max(0,100-others);
+  });
+}
+
+function addScenario(){
+  scCount++;
+  const d=document.createElement('div');d.className='scenario-card';
+  d.innerHTML=`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+    <span class="badge badge-opt">Comparison scenario</span>
+    <button class="rmbtn" onclick="this.closest('.scenario-card').remove();refreshScenarioDropdown()">×</button>
+  </div>
+  <div class="fg" style="margin-bottom:11px;">
+    <label class="fl" style="color:var(--accent);">Plan name <span style="color:var(--muted);font-style:italic;text-transform:none;letter-spacing:0;font-weight:400;">(shows in Projections &amp; Compare dropdowns)</span></label>
+    <input type="text" class="sc-label" value="Scenario ${scCount+1}" oninput="refreshScenarioDropdown()" placeholder="e.g. Higher spend early" style="font-size:14px;font-weight:500;">
+  </div>
+  <div class="g2">
+    <div><label class="fl">Annual spend target ($)</label><input type="number" class="sc-amt" placeholder="e.g. 120000"></div>
+    <div><label class="fl">Duration</label>
+      <select class="sc-dur" onchange="this.closest('.scenario-card').querySelector('.sc-stepdown').style.display=this.value==='c'?'block':'none'">
+        <option value="all">All years</option><option value="c">Custom step-down</option>
+      </select>
+    </div>
+  </div>
+  <div class="sc-stepdown" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+    <div class="g2" style="margin-bottom:7px;">
+      <div><label class="fl">First period amount ($)</label><input type="number" class="sc-a1" placeholder="e.g. 120000"></div>
+      <div><label class="fl">For how many years</label><input type="number" class="sc-y1" placeholder="e.g. 10"></div>
+    </div>
+    <div class="g2">
+      <div><label class="fl">Then amount ($/yr)</label><input type="number" class="sc-a2" placeholder="e.g. 100000"></div>
+      <div><label class="fl">Remaining years</label><input type="text" value="All remaining" disabled style="opacity:.5;"></div>
+    </div>
+  </div>`;
+  document.getElementById('extra-scenarios').appendChild(d);
+}
+function addCrash(btn){const d=document.createElement('div');d.className='ri crash';d.innerHTML='<input type="number" placeholder="Year"><input type="number" placeholder="%"><input type="number" placeholder="Yrs"><input type="text" placeholder="Notes"><button class="rmbtn" onclick="this.closest(\'.ri\').remove()">×</button>';btn.previousElementSibling.appendChild(d);}
+function addStressTest(){stressCount++;const d=document.createElement('div');d.className='stress-card';d.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;"><input type="text" value="Stress test ${stressCount}" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;flex:1;color:var(--text);"><div style="display:flex;gap:6px;"><button class="btn btn-sm btn-primary" onclick="runStressTest(this)">Run test</button><button class="btn btn-sm btn-danger" onclick="this.closest('.stress-card').remove()">Remove</button></div></div><div class="colhdr crash" style="display:grid;grid-template-columns:75px 65px 95px 1fr 24px;gap:7px;"><span>Year</span><span>Drop %</span><span>Recovery yrs</span><span>Notes</span><span></span></div><div class="crash-events"><div class="ri crash"><input type="number" placeholder="Year"><input type="number" placeholder="%"><input type="number" placeholder="Yrs"><input type="text" placeholder="Notes"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div></div><button class="btn-link" onclick="addCrash(this)">+ Add crash event</button>`;document.getElementById('stress-test-defs').appendChild(d);}
+
+// ── Config reader ─────────────────────────────────────────────────────────────
+function readConfig(){
+  const cur=parseInt(document.getElementById('cur-age').value)||35;
+  const ret=parseInt(document.getElementById('ret-age').value)||65;
+  const endAge=parseInt(document.getElementById('end-age').value)||95;
+  const rmdAge=parseInt(document.getElementById('rmd-age').value)||73;
+  const accounts=[...document.querySelectorAll('#accts .ri')].map(r=>{const ins=r.querySelectorAll('input,select');return{name:ins[0].value||'Account',balance:parseFloat(ins[1].value)||0,type:ins[2].value};});
+  const contribs=[...document.querySelectorAll('#contrib-entries .ri')].map(r=>{const sels=r.querySelectorAll('select');const ins=r.querySelectorAll('input');const stopStr=sels[1]?.options[sels[1].selectedIndex]?.text||'At retirement';const stopAge=stopStr==='At retirement'?ret:parseInt(stopStr.match(/\d+/)?.[0])||ret;return{account:sels[0]?.options[sels[0].selectedIndex]?.text,annual:parseFloat(ins[0]?.value)||0,match:parseFloat(ins[1]?.value)||0,stopAt:stopAge};});
+  const filingPeriods=[...document.querySelectorAll('.filing-row')].map((fp,i)=>{const sel=fp.querySelector('.fp-sel');const ageIn=fp.querySelector('input[type=number]');return{fromAge:i===0?cur:parseInt(ageIn?.value)||cur,status:sel?.value||'mfj',stdDed:DEDV[sel?.value]||32200};});
+  const ssStart=parseInt(document.getElementById('ss-start').value);
+  const ssAmt=parseFloat(document.getElementById('ss-amt').value);
+  const ss=(ssStart&&ssAmt)?{name:document.getElementById('ss-name').value||'SS',startAge:ssStart,annualAmt:ssAmt,cola:parseFloat(document.getElementById('ss-cola').value)||0,taxability:document.getElementById('ss-tax').value}:null;
+  const incomeStreams=[...document.querySelectorAll('#income-streams .income-card')].map(c=>{const sels=c.querySelectorAll('select');const ins=c.querySelectorAll('input[type=number]');const name=c.querySelector('input[type=text]')?.value||'Income';return{type:sels[0]?.options[sels[0].selectedIndex]?.text,name,startAge:parseInt(ins[0]?.value)||0,endAge:parseInt(ins[1]?.value)||null,annualAmt:parseFloat(ins[2]?.value)||0,cola:parseFloat(ins[3]?.value)||0,taxability:sels[1]?.options[sels[1].selectedIndex]?.text||'100% taxable (ordinary income)'};}).filter(s=>s.startAge&&s.annualAmt);
+  const rothPeriods=[...document.querySelectorAll('#roth-entries .ri')].map(r=>{const ins=r.querySelectorAll('input');const sel=r.querySelector('select');const bracket=parseFloat(sel?.options[sel.selectedIndex]?.text)||24;return{fromAge:parseInt(ins[0]?.value)||0,toAge:parseInt(ins[1]?.value)||0,amount:parseFloat(ins[2]?.value)||0,bracket};}).filter(r=>r.fromAge&&r.amount);
+
+  // Read withdrawal periods
+  const wdPeriods=[...document.querySelectorAll('.wd-period')].map(p=>{
+    const yrsEl=p.querySelector('.wd-dur-yrs');
+    const selEl=p.querySelector('.wd-dur-sel');
+    const yrsVal=parseInt(yrsEl?.value)||0;
+    const selVal=selEl?.value||'indefinite';
+    const durType=yrsVal>0?'years':'depleted';
+    const durYears=yrsVal>0?yrsVal:null;
+    const allocs=[...p.querySelectorAll('.wd-alloc-row')].map(row=>{
+      const acct=row.querySelector('.wd-acct-sel')?.options[row.querySelector('.wd-acct-sel').selectedIndex]?.text||'';
+      const pct=parseFloat(row.querySelector('.wd-pct')?.value)||0;
+      return{account:acct,pct};
+    }).filter(a=>a.account&&a.pct>0);
+    return{name:p.querySelector('.wd-period-name')?.value||'Period',durType,durYears,allocs,elapsed:0};
+  });
+
+  const baseDur=document.getElementById('base-dur').value;
+  const baseScenario={label:document.getElementById('base-lbl').value||'Base plan',amount:parseFloat(document.getElementById('base-amt').value)||0,type:baseDur,a1:parseFloat(document.getElementById('base-a1').value)||0,y1:parseInt(document.getElementById('base-y1').value)||0,a2:parseFloat(document.getElementById('base-a2').value)||0};
+  const extraScenarios=[...document.querySelectorAll('#extra-scenarios .scenario-card')].map(s=>{
+    const label=s.querySelector('.sc-label')?.value||'Scenario';
+    const amount=parseFloat(s.querySelector('.sc-amt')?.value)||0;
+    const type=s.querySelector('.sc-dur')?.value||'all';
+    const a1=parseFloat(s.querySelector('.sc-a1')?.value)||0;
+    const y1=parseInt(s.querySelector('.sc-y1')?.value)||0;
+    const a2=parseFloat(s.querySelector('.sc-a2')?.value)||0;
+    return{label,amount,type,a1,y1,a2};
+  });
+  return{cur,ret,endAge,rmdAge,accounts,contribs,filingPeriods,ss,incomeStreams,rothPeriods,wdPeriods,baseScenario,extraScenarios,infl:parseFloat(document.getElementById('infl').value)||3.0,stockR:parseFloat(document.getElementById('stock').value)||7.0,bondR:parseFloat(document.getElementById('bond').value)||4.67,blendStart:parseFloat(document.getElementById('blend-start').value)||70,blendEnd:parseFloat(document.getElementById('blend-end').value)||50,below:parseFloat(document.getElementById('below').value)||2.0,above:parseFloat(document.getElementById('above').value)||2.0};
+}
+
+// ── Simulation helpers ────────────────────────────────────────────────────────
+function getBlended(age,cfg,offset=0){const t=Math.min(1,Math.max(0,(age-cfg.cur)/Math.max(1,cfg.endAge-cfg.cur)));const sp=(cfg.blendStart+(cfg.blendEnd-cfg.blendStart)*t)/100;return(sp*cfg.stockR+(1-sp)*cfg.bondR-offset)/100;}
+// Cash/MM grows at inflation rate (approx cash yield), not stock/bond blend
+function getAccountRate(acctType,age,cfg,offset=0){
+  if(acctType==='Cash/MM') return cfg.infl/100; // cash earns ~inflation (money market)
+  return getBlended(age,cfg,offset);
+}
+function getFiling(age,periods){let p=periods[0];for(const fp of periods)if(age>=fp.fromAge)p=fp;return p;}
+function getSS(age,ss,curAge){
+  if(!ss||age<ss.startAge)return 0;
+  // The benefit amount entered is in today's dollars at current age.
+  // COLA compounds from current age all the way through — both during
+  // the waiting period (before SS starts) and after claiming.
+  // So by the time SS starts at startAge, the benefit has already grown
+  // for (startAge - curAge) years of COLA, then continues to grow each year after.
+  const yearsOfCola=age-curAge; // total years of COLA from today
+  return ss.annualAmt*Math.pow(1+ss.cola/100,yearsOfCola);
+}
+function getOtherIncome(age,streams,curAge){
+  return streams.filter(s=>age>=s.startAge&&(!s.endAge||age<=s.endAge)).map(s=>({
+    name:s.name,
+    // Amount entered in today's dollars — COLA compounds from current age
+    amount:s.annualAmt*Math.pow(1+s.cola/100,age-curAge),
+    taxability:s.taxability
+  }));
+}
+function getRoth(age,periods){const p=periods.find(r=>age>=r.fromAge&&age<=r.toAge);if(!p||!p.amount)return null;return{amount:p.amount,bracket:p.bracket,taxCost:Math.round(p.amount*p.bracket/100)};}
+function getRMD(bal,age){if(bal<=0)return 0;return bal/(IRS[Math.min(age,95)]||8.9);}
+function getWdTarget(age,sc,ret,infl){
+  // Spend target grows with inflation each year from retirement age
+  const yearsRetired=Math.max(0,age-ret);
+  const inflFactor=Math.pow(1+(infl||3)/100,yearsRetired);
+  if(sc.type==='c'){const yr=age-ret;const base=yr<sc.y1?sc.a1:sc.a2;return base*inflFactor;}
+  return sc.amount*inflFactor;
+}
+
+// Withdraw netWd from accounts using the period schedule.
+// Each period lists accounts with % allocations. Concurrent accounts are drawn simultaneously.
+// If one account in a period runs dry, the other accounts in that period cover its shortfall.
+// After all scheduled accounts are dry, any remaining need comes from unscheduled accounts in entry order.
+function withdrawFromSchedule(accts,netWd,wdState,cfg){
+  if(netWd<=0)return{accts,wdState};
+  let rem=netWd;
+  const periods=wdState.periods;
+
+  // Find active period
+  let activePeriodIdx=-1;
+  for(let i=0;i<periods.length;i++){
+    const p=periods[i];
+    if(p.durType==='depleted'){activePeriodIdx=i;break;}
+    if(p.durType==='years'&&p.elapsed<p.durYears){activePeriodIdx=i;break;}
+  }
+
+  if(activePeriodIdx>=0){
+    const period=periods[activePeriodIdx];
+    // Try to withdraw from this period's accounts proportionally
+    const allocations=period.allocs.filter(a=>a.pct>0);
+    if(allocations.length>0){
+      // Each account covers its pct of rem. If it can't, others absorb the shortfall.
+      let remaining=rem;
+      let iterations=0;
+      while(remaining>0.01&&iterations<20){
+        iterations++;
+        const available=allocations.map(a=>{const idx=accts.findIndex(ac=>ac.name===a.account);return idx>=0?accts[idx].balance:0;});
+        const totalAvail=available.reduce((s,v)=>s+v,0);
+        if(totalAvail<=0)break;
+        // Distribute proportionally by pct, capped by available balance
+        const targets=allocations.map((a,i)=>Math.min(remaining*(a.pct/100),available[i]));
+        const taken=targets.reduce((s,v)=>s+v,0);
+        targets.forEach((take,i)=>{const idx=accts.findIndex(ac=>ac.name===allocations[i].account);if(idx>=0){accts[idx].balance=Math.max(0,accts[idx].balance-take);}});
+        remaining-=taken;
+      }
+      rem=Math.max(0,remaining);
+    }
+    // Advance period elapsed time
+    period.elapsed=(period.elapsed||0)+1;
+    // Advance to next period if duration met
+    if(period.durType==='years'&&period.elapsed>=period.durYears){activePeriodIdx++;}
+    else if(period.durType==='depleted'){
+      const allDry=period.allocs.every(a=>{const idx=accts.findIndex(ac=>ac.name===a.account);return idx<0||accts[idx].balance<=0;});
+      if(allDry)activePeriodIdx++;
+    }
+    wdState.currentPeriod=activePeriodIdx;
+  }
+
+  // Fallback: draw from any remaining accounts not in schedule (or all if no schedule)
+  if(rem>0.01){
+    const scheduledAccounts=new Set((cfg.wdPeriods||[]).flatMap(p=>p.allocs.map(a=>a.account)));
+    for(let i=0;i<accts.length&&rem>0.01;i++){
+      if(scheduledAccounts.size>0&&scheduledAccounts.has(accts[i].name))continue;
+      const take=Math.min(rem,accts[i].balance);
+      accts[i].balance=Math.max(0,accts[i].balance-take);
+      rem-=take;
+    }
+    // If still remaining (all scheduled depleted), draw from any account
+    if(rem>0.01){
+      for(let i=0;i<accts.length&&rem>0.01;i++){
+        const take=Math.min(rem,accts[i].balance);
+        accts[i].balance=Math.max(0,accts[i].balance-take);
+        rem-=take;
+      }
+    }
+  }
+
+  return{accts,wdState};
+}
+
+function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState){
+  const accts=state.map(a=>({...a}));
+  const isRet=age>=cfg.ret;
+  const fp=getFiling(age,cfg.filingPeriods);
+  const r=getBlended(age,cfg,offset);
+  const cf=1-(crashDrop||0);
+  if(!isRet){
+    cfg.contribs.forEach(c=>{if(age<c.stopAt){const idx=accts.findIndex(a=>a.name===c.account);if(idx>=0)accts[idx].balance+=c.annual+c.match;}});
+    accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset);a.balance=Math.max(0,a.balance*(1+rate)*cf);});
+    return{accts,tax:0,ssIncome:0,otherIncome:[],rmd:0,roth:null,netWithdrawal:0,totalIncome:0,wdState};
+  }
+  accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset);a.balance=Math.max(0,a.balance*(1+rate)*cf);});
+  const ssIncome=getSS(age,cfg.ss,cfg.cur);
+  const otherIncome=getOtherIncome(age,cfg.incomeStreams,cfg.cur);
+  const totalIncome=ssIncome+otherIncome.reduce((s,i)=>s+i.amount,0);
+  const tradIdx=accts.findIndex(a=>a.type==='Tax-deferred');
+  let rmd=0;
+  if(age>=cfg.rmdAge&&tradIdx>=0){rmd=Math.min(getRMD(accts[tradIdx].balance,age),accts[tradIdx].balance);accts[tradIdx].balance=Math.max(0,accts[tradIdx].balance-rmd);}
+  const roth=getRoth(age,cfg.rothPeriods);
+  if(roth){const fi=accts.findIndex(a=>a.type==='Tax-deferred');const ti=accts.findIndex(a=>a.type==='Tax-free (Roth)');if(fi>=0&&ti>=0){const amt=Math.min(roth.amount,accts[fi].balance);accts[fi].balance-=amt;accts[ti].balance+=amt;}}
+  // SS and income apply first; portfolio covers only the remainder
+  const netWd=Math.max(0,wdAmt-totalIncome);
+  const result=withdrawFromSchedule(accts,netWd,wdState,cfg);
+  const finalAccts=result.accts;
+  let ordIncome=rmd+(roth?roth.amount:0);
+  const ssTaxPct=parseFloat(cfg.ss?.taxability)||85;
+  ordIncome+=ssIncome*ssTaxPct/100;
+  otherIncome.forEach(inc=>{if(inc.taxability.includes('100%'))ordIncome+=inc.amount;else if(inc.taxability.includes('85%'))ordIncome+=inc.amount*0.85;});
+  const taxable=Math.max(0,ordIncome-fp.stdDed);
+  const brackets=fp.status==='mfj'?[[23200,.1],[94300,.12],[201050,.22],[383900,.24],[487450,.32],[731200,.35],[Infinity,.37]]:[[11600,.1],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[609350,.35],[Infinity,.37]];
+  let tax=0,prev=0;
+  for(const[top,rate]of brackets){if(taxable<=prev)break;tax+=Math.min(taxable-prev,top-prev)*rate;prev=top;}
+  return{accts:finalAccts,tax:Math.round(tax),ssIncome,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdState:result.wdState};
+}
+
+function makeWdState(cfg){
+  return{periods:cfg.wdPeriods.map(p=>({...p,elapsed:0})),currentPeriod:0};}
+
+function simulate(cfg,scenario,offset=0,crashes=[]){
+  const years=[];
+  let state=cfg.accounts.map(a=>({...a}));
+  let wdState=makeWdState(cfg);
+  const baseYear=new Date().getFullYear();
+  for(let age=cfg.cur;age<=cfg.endAge;age++){
+    const yr=baseYear+(age-cfg.cur);
+    const wdAmt=getWdTarget(age,scenario,cfg.ret,cfg.infl);
+    let crashDrop=0;
+    crashes.forEach(ce=>{if(yr===ce.year)crashDrop=ce.drop/100;});
+    const result=simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState);
+    state=result.accts;
+    wdState=result.wdState;
+    years.push({age,year:yr,isRet:age>=cfg.ret,filing:getFiling(age,cfg.filingPeriods),...result,total:result.accts.reduce((s,a)=>s+a.balance,0),wdTarget:wdAmt});
+  }
+  return years;
+}
+
+// ── Projections ───────────────────────────────────────────────────────────────
+function runProjections(){
+  const ba=parseFloat(document.getElementById('base-amt').value);
+  if(!ba||ba<=0){document.getElementById('val-err').style.display='block';return;}
+  document.getElementById('val-err').style.display='none';
+  const cfg=readConfig();
+  simData={
+    cfg,
+    base:simulate(cfg,cfg.baseScenario,0),
+    below:simulate(cfg,cfg.baseScenario,cfg.below),
+    above:simulate(cfg,cfg.baseScenario,-cfg.above),
+    extras:cfg.extraScenarios.map(sc=>({
+      label:sc.label,
+      base:simulate(cfg,sc,0),
+      below:simulate(cfg,sc,cfg.below),
+      above:simulate(cfg,sc,-cfg.above)
+    }))
+  };
+  const sel=document.getElementById('proj-sc-sel');
+  sel.innerHTML=`<option value="base">${cfg.baseScenario.label}</option>`;
+  simData.extras.forEach((e,i)=>sel.innerHTML+=`<option value="${i}">${e.label}</option>`);
+  goTab('proj');
+}
+
+function fmt(v){if(!v&&v!==0)return'—';return'$'+Math.round(v).toLocaleString();}
+
+function getViewData(){
+  if(!simData)return null;
+  const view=document.getElementById('proj-view')?.value||'base';
+  const scSel=document.getElementById('proj-sc-sel')?.value;
+  const isExtra=scSel&&scSel!=='base';
+  let rows;
+  if(isExtra){
+    const ex=simData.extras[parseInt(scSel)];
+    rows=view==='below'?(ex?.below||ex?.base):view==='above'?(ex?.above||ex?.base):(ex?.base||simData.base);
+  } else {
+    rows=view==='below'?simData.below:view==='above'?simData.above:simData.base;
+  }
+  return{view,rows,isExtra};
+}
+
+function renderProjections(){
+  if(!simData)return;
+  document.getElementById('proj-empty').style.display='none';
+  document.getElementById('proj-results').style.display='block';
+  const {view,rows,isExtra}=getViewData();
+  const cfg=simData.cfg;
+
+  const last=rows[rows.length-1];
+  const ruin=rows.find(r=>r.total<=0);
+  const peak=rows.reduce((m,r)=>r.total>m.total?r:m,rows[0]);
+  const viewLabel=view==='below'?'below avg market':view==='above'?'above avg market':view==='all3'?'avg market (chart shows all 3)':'avg market';
+  document.getElementById('metrics-row').innerHTML=`
+    <div class="metric-card"><div class="metric-lbl">Starting portfolio</div><div class="metric-val">${fmt(cfg.accounts.reduce((s,a)=>s+a.balance,0))}</div></div>
+    <div class="metric-card"><div class="metric-lbl">At plan end · ${viewLabel} (age ${last.age})</div><div class="metric-val ${last.total>0?'g':'r'}">${fmt(last.total)}</div></div>
+    <div class="metric-card"><div class="metric-lbl">Portfolio peak age ${peak.age}</div><div class="metric-val a">${fmt(peak.total)}</div></div>
+    <div class="metric-card"><div class="metric-lbl">Portfolio ruin · ${viewLabel}</div><div class="metric-val ${ruin?'r':'g'}">${ruin?'Age '+ruin.age:'Never'}</div></div>`;
+  renderChart();
+  // For "all three" view, tables show average market rows (all 3 can't fit in one table)
+  const scSel2=document.getElementById('proj-sc-sel')?.value;
+  const ex2=(scSel2&&scSel2!=='base')?simData.extras[parseInt(scSel2)]:null;
+  const tableRows=view==='all3'?(ex2?ex2.base:simData.base):rows;
+  buildBalanceTable(tableRows,cfg,view);
+  buildDetailTable(tableRows,cfg,view);
+}
+
+function renderChart(){
+  if(!simData)return;
+  const {view,rows,isExtra}=getViewData();
+  const cfg=simData.cfg;
+  const labels=rows.map(r=>`${r.age}`);
+
+  let datasets=[];
+  if(view==='all3'){
+    const scSel=document.getElementById('proj-sc-sel')?.value;
+    const ex=(scSel&&scSel!=='base')?simData.extras[parseInt(scSel)]:null;
+    const aboveRows=ex?ex.above:simData.above;
+    const avgRows=ex?ex.base:simData.base;
+    const belowRows=ex?ex.below:simData.below;
+    datasets=[
+      {label:'Above average market',data:aboveRows.map(r=>Math.round(r.total)),borderColor:'#22c55e',borderWidth:2,pointRadius:0,fill:false,tension:.3},
+      {label:'Average market',data:avgRows.map(r=>Math.round(r.total)),borderColor:'#4f9cf9',borderWidth:2.5,pointRadius:0,fill:false,tension:.3},
+      {label:'Below average market',data:belowRows.map(r=>Math.round(r.total)),borderColor:'#ef4444',borderWidth:2,pointRadius:0,fill:false,tension:.3}
+    ];
+  } else {
+    datasets=cfg.accounts.map((a,i)=>({label:a.name,data:rows.map(r=>Math.round(r.accts[i]?.balance||0)),borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+'18',borderWidth:2,pointRadius:0,fill:false,tension:.3}));
+    datasets.push({label:'Total portfolio',data:rows.map(r=>Math.round(r.total)),borderColor:'#fff',backgroundColor:'#ffffff10',borderWidth:2.5,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]});
+  }
+
+  destroyChart('main-chart');
+  charts['main-chart']=new Chart(document.getElementById('main-chart'),{type:'line',data:{labels,datasets},options:chartOpts()});
+
+  const hasIncome=cfg.ss||cfg.incomeStreams.length>0;
+  const showIncome=hasIncome&&view!=='all3';
+  document.getElementById('income-chart-wrap').style.display=showIncome?'block':'none';
+  if(showIncome){
+    const incDs=[];
+    if(cfg.ss)incDs.push({label:cfg.ss.name,data:rows.map(r=>Math.round(r.ssIncome)),borderColor:'#22c55e',borderWidth:2,pointRadius:0,fill:false,tension:.3});
+    cfg.incomeStreams.forEach((s,i)=>incDs.push({label:s.name,data:rows.map(r=>Math.round(r.otherIncome.find(o=>o.name===s.name)?.amount||0)),borderColor:COLORS[(i+2)%COLORS.length],borderWidth:2,pointRadius:0,fill:false,tension:.3}));
+    incDs.push({label:'Net from portfolio',data:rows.map(r=>Math.round(r.netWithdrawal)),borderColor:'#f59e0b',borderWidth:2,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]});
+    destroyChart('income-chart');
+    charts['income-chart']=new Chart(document.getElementById('income-chart'),{type:'line',data:{labels,datasets:incDs},options:chartOpts()});
+  }
+}
+
+// Account balances table — focused, clean view of balances per account per year
+function buildBalanceTable(rows,cfg,view){
+  const viewLabel=view==='below'?' — below avg market':view==='above'?' — above avg market':view==='all3'?' — avg market (select a single view for detail)':'';
+  let th=`<tr><th>Year</th><th>Age</th><th>Phase</th>`;
+  cfg.accounts.forEach(a=>th+=`<th>${a.name}</th>`);
+  th+=`<th>Total portfolio${viewLabel}</th></tr>`;
+  document.getElementById('bal-thead').innerHTML=th;
+  let tb='';let prevPhase=null;
+  rows.forEach(r=>{
+    const phase=r.isRet?'Retired':'Pre-ret';
+    const br=(phase!==prevPhase&&prevPhase!==null)?' class="phase-break"':'';prevPhase=phase;
+    tb+=`<tr${br}><td>${r.year}</td><td>${r.age}</td><td>${phase}</td>`;
+    r.accts.forEach(a=>tb+=`<td class="${a.balance<=0?'dep':'ab'}">${fmt(a.balance)}</td>`);
+    tb+=`<td class="${r.total>0?'pos':'neg'}" style="font-weight:600;">${fmt(r.total)}</td></tr>`;
+  });
+  document.getElementById('bal-tbody').innerHTML=tb;
+}
+
+function buildDetailTable(rows,cfg,view){
+  const hasSSI=!!cfg.ss,hasOther=cfg.incomeStreams.length>0,hasRoth=cfg.rothPeriods.length>0,isPre=cfg.cur<cfg.ret;
+  let th='<tr><th>Year</th><th>Age</th><th>Phase</th>';
+  cfg.accounts.forEach(a=>th+=`<th>${a.name}</th>`);
+  th+='<th>Total</th>';
+  if(isPre)th+='<th>Contributions</th>';
+  if(hasSSI)th+=`<th>${cfg.ss.name}</th>`;
+  if(hasOther)cfg.incomeStreams.forEach(s=>th+=`<th>${s.name}</th>`);
+  th+='<th>Spend target</th><th>From portfolio</th><th>RMD</th>';
+  if(hasRoth)th+='<th>Roth Conv</th><th>Bracket</th><th>Conv Tax</th>';
+  th+='<th>Est. Tax</th></tr>';
+  document.getElementById('proj-thead').innerHTML=th;
+  let tb='';let prevPhase=null;
+  rows.forEach(r=>{
+    const phase=r.isRet?'Retired':'Pre-ret';
+    const br=(phase!==prevPhase&&prevPhase!==null)?' class="phase-break"':'';prevPhase=phase;
+    tb+=`<tr${br}><td>${r.year}</td><td>${r.age}</td><td>${phase}</td>`;
+    r.accts.forEach(a=>tb+=`<td class="${a.balance<=0?'dep':'ab'}">${fmt(a.balance)}</td>`);
+    tb+=`<td class="${r.total>0?'pos':'neg'}">${fmt(r.total)}</td>`;
+    if(isPre)tb+=`<td class="${!r.isRet?'pos':'zer'}">${!r.isRet?fmt(cfg.contribs.reduce((s,c)=>s+c.annual+c.match,0)):'—'}</td>`;
+    if(hasSSI)tb+=`<td>${r.ssIncome>0?fmt(r.ssIncome):'—'}</td>`;
+    if(hasOther)cfg.incomeStreams.forEach(s=>{const inc=r.otherIncome.find(o=>o.name===s.name);tb+=`<td>${inc?fmt(inc.amount):'—'}</td>`;});
+    tb+=`<td>${r.isRet?fmt(r.wdTarget):'—'}</td>`;
+    tb+=`<td>${r.netWithdrawal>0?fmt(r.netWithdrawal):'—'}</td><td>${r.rmd>0?fmt(r.rmd):'—'}</td>`;
+    if(hasRoth){tb+=`<td>${r.roth?fmt(r.roth.amount):'—'}</td><td>${r.roth?r.roth.bracket+'%':'—'}</td><td class="${r.roth?'neg':'zer'}">${r.roth?fmt(r.roth.taxCost):'—'}</td>`;}
+    tb+=`<td class="${r.tax>0?'neg':'zer'}">${r.tax>0?fmt(r.tax):'—'}</td></tr>`;
+  });
+  document.getElementById('proj-tbody').innerHTML=tb;
+}
+
+function refreshScenarioDropdown(){
+  if(!simData)return;
+  const sel=document.getElementById('proj-sc-sel');
+  const curVal=sel.value;
+  sel.innerHTML=`<option value="base">${document.getElementById('base-lbl').value||'Base plan'}</option>`;
+  [...document.querySelectorAll('#extra-scenarios .sc-label')].forEach((inp,i)=>{
+    sel.innerHTML+=`<option value="${i}">${inp.value||'Scenario '+(i+2)}</option>`;
+  });
+  sel.value=curVal; // restore selection
+}
+
+function renderCompare(){
+  if(!simData){
+    document.getElementById('compare-empty').style.display='block';
+    document.getElementById('compare-results').style.display='none';
+    return;
+  }
+  document.getElementById('compare-empty').style.display='none';
+  document.getElementById('compare-results').style.display='block';
+  const mktView=document.getElementById('compare-mkt-view')?.value||'base';
+  const mktLabel=mktView==='below'?'below avg market':mktView==='above'?'above avg market':'avg market';
+  const getPlanRows=e=>mktView==='below'?e.below:mktView==='above'?e.above:e.base;
+  const labels=simData.base.map(r=>`${r.age}`);
+  const all=[
+    {label:simData.cfg.baseScenario.label, data:getPlanRows(simData)},
+    ...simData.extras.map(e=>({label:e.label, data:getPlanRows(e)}))
+  ];
+  document.getElementById('compare-chart-title').textContent=`Total portfolio — scenario comparison · ${mktLabel}`;
+  const datasets=all.map((s,i)=>({label:s.label,data:s.data.map(r=>Math.round(r.total)),borderColor:COLORS[i],borderWidth:2,pointRadius:0,fill:false,tension:.3}));
+  destroyChart('compare-chart');
+  charts['compare-chart']=new Chart(document.getElementById('compare-chart'),{type:'line',data:{labels,datasets},options:chartOpts()});
+  document.getElementById('compare-metrics').innerHTML=all.map((s,i)=>{
+    const last=s.data[s.data.length-1];
+    const ruin=s.data.find(r=>r.total<=0);
+    const peak=s.data.reduce((m,r)=>r.total>m.total?r:m,s.data[0]);
+    return`<div class="metric-card">
+      <div class="metric-lbl" style="color:${COLORS[i]}">${s.label}</div>
+      <div class="metric-val ${last.total>0?'g':'r'}">${fmt(last.total)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Peak: ${fmt(peak.total)} at age ${peak.age}</div>
+      <div style="font-size:11px;color:var(--muted);">Ruin: ${ruin?'Age '+ruin.age:'Never'}</div>
+    </div>`;
+  }).join('');
+}
+
+function runStressTest(btn){
+  if(!simData){alert('Run projections from Setup first.');return;}
+  const card=btn.closest('.stress-card');
+  const testName=card.querySelector('input[type=text]').value;
+  const crashes=[...card.querySelectorAll('.crash-events .ri')].map(r=>{
+    const ins=r.querySelectorAll('input');
+    return{year:parseInt(ins[0].value),drop:parseFloat(ins[1].value)||0,recoveryYrs:parseInt(ins[2].value)||1,notes:ins[3].value};
+  }).filter(e=>e.year&&e.drop);
+  const cfg=simData.cfg;
+  const mktView=document.getElementById('stress-mkt-view').value;
+  const offsets={base:0,below:cfg.below,above:-cfg.above};
+
+  // Simulate stressed and unstressed for each selected market scenario
+  const scenarios=mktView==='all3'
+    ?[{key:'above',label:'Above avg',color:'#22c55e'},{key:'base',label:'Average',color:'#4f9cf9'},{key:'below',label:'Below avg',color:'#ef4444'}]
+    :[{key:mktView,label:mktView==='below'?'Below avg':mktView==='above'?'Above avg':'Average',color:mktView==='below'?'#ef4444':mktView==='above'?'#22c55e':'#4f9cf9'}];
+
+  stressData={testName,crashes,mktView,scenarios:scenarios.map(s=>({
+    ...s,
+    base:simulate(cfg,cfg.baseScenario,offsets[s.key],[]),
+    stressed:simulate(cfg,cfg.baseScenario,offsets[s.key],crashes)
+  }))};
+
+  const firstBase=stressData.scenarios[0].base;
+  const labels=firstBase.map(r=>`${r.age}`);
+  document.getElementById('stress-title').textContent=`— ${testName} · ${mktView==='all3'?'all market scenarios':scenarios[0].label+' market'}`;
+  document.getElementById('stress-chart-wrap').style.display='block';
+  document.getElementById('stress-result-card').style.display='block';
+
+  // Build chart datasets — for each scenario show base (dashed) and stressed (solid)
+  const datasets=[];
+  stressData.scenarios.forEach(s=>{
+    datasets.push({
+      label:`${s.label} — no crash`,
+      data:s.base.map(r=>Math.round(r.total)),
+      borderColor:s.color,borderWidth:1.5,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]
+    });
+    datasets.push({
+      label:`${s.label} — stressed`,
+      data:s.stressed.map(r=>Math.round(r.total)),
+      borderColor:s.color,borderWidth:2.5,pointRadius:0,fill:false,tension:.3
+    });
+  });
+
+  destroyChart('stress-chart');
+  charts['stress-chart']=new Chart(document.getElementById('stress-chart'),{
+    type:'line',data:{labels,datasets},options:chartOpts()
+  });
+
+  // Result metrics — one row per scenario
+  const metricsHTML=stressData.scenarios.map(s=>{
+    const lb=s.base[s.base.length-1];
+    const ls=s.stressed[s.stressed.length-1];
+    const diff=ls.total-lb.total;
+    const ruinBase=s.base.find(r=>r.total<=0);
+    const ruinStress=s.stressed.find(r=>r.total<=0);
+    return`<div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:500;color:${s.color};margin-bottom:7px;">${s.label} market</div>
+      <div class="metrics-row" style="grid-template-columns:repeat(4,1fr);">
+        <div class="metric-card"><div class="metric-lbl">No crash — end</div><div class="metric-val g">${fmt(lb.total)}</div><div style="font-size:11px;color:var(--muted);margin-top:3px;">Ruin: ${ruinBase?'Age '+ruinBase.age:'Never'}</div></div>
+        <div class="metric-card"><div class="metric-lbl">Stressed — end</div><div class="metric-val ${ls.total>0?'a':'r'}">${fmt(ls.total)}</div><div style="font-size:11px;color:var(--muted);margin-top:3px;">Ruin: ${ruinStress?'Age '+ruinStress.age:'Never'}</div></div>
+        <div class="metric-card"><div class="metric-lbl">Impact of crash</div><div class="metric-val ${diff>=0?'g':'r'}">${diff>=0?'+':''}${fmt(diff)}</div></div>
+        <div class="metric-card"><div class="metric-lbl">Crash events</div><div class="metric-val" style="font-size:14px;">${crashes.map(c=>c.drop+'% drop').join(', ')||'—'}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('stress-metrics').innerHTML=metricsHTML;
+}
+
+function saveStressResult(){
+  if(!stressData)return;
+  try{
+    const saves=getSaved();
+    const summary=stressData.scenarios.map(s=>({
+      market:s.label,
+      endingBase:Math.round(s.base[s.base.length-1].total),
+      endingStressed:Math.round(s.stressed[s.stressed.length-1].total),
+      ruinBase:s.base.find(r=>r.total<=0)?.age||null,
+      ruinStressed:s.stressed.find(r=>r.total<=0)?.age||null
+    }));
+    saves.push({type:'stress',name:stressData.testName,date:new Date().toLocaleDateString(),crashes:stressData.crashes,mktView:stressData.mktView,scenarios:summary});
+    localStorage.setItem('rp_saves',JSON.stringify(saves));
+    alert('Saved!');
+  }catch(e){alert('Could not save: '+e.message);}
+}
+function getSaved(){try{return JSON.parse(localStorage.getItem('rp_saves')||'[]');}catch{return[];}}
+function renderSaved(){
+  const saves=getSaved();const list=document.getElementById('saved-list');const empty=document.getElementById('saved-empty');
+  if(!saves.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=saves.map((s,i)=>{
+    let detail='';
+    if(s.scenarios){
+      detail=s.scenarios.map(sc=>`${sc.market}: no crash ${fmt(sc.endingBase)} → stressed ${fmt(sc.endingStressed)}${sc.ruinStressed?' (ruin age '+sc.ruinStressed+')':''}`).join(' | ');
+    } else {
+      detail=`Base: ${fmt(s.endingBase)} → Stressed: ${fmt(s.endingStressed)}`;
+    }
+    return`<div class="saved-item"><div><div style="font-size:13px;font-weight:500;">${s.name}</div><div style="font-size:11px;color:var(--muted);">Stress test · ${s.date} · ${detail}</div></div><button class="btn btn-sm btn-danger" onclick="deleteSaved(${i})">Delete</button></div>`;
+  }).join('');
+}
+function deleteSaved(i){const saves=getSaved();saves.splice(i,1);localStorage.setItem('rp_saves',JSON.stringify(saves));renderSaved();}
+function clearAllSaved(){if(confirm('Clear all saved results?')){localStorage.removeItem('rp_saves');renderSaved();}}
+
+function exportCSV(){
+  if(!simData)return;
+  const {rows,view}=getViewData();const cfg=simData.cfg;
+  const tableRows=view==='all3'?simData.base:rows;
+  const hasSSI=!!cfg.ss,hasOther=cfg.incomeStreams.length>0,hasRoth=cfg.rothPeriods.length>0,isPre=cfg.cur<cfg.ret;
+  const hdrs=['Year','Age','Phase','Filing','StdDed',...cfg.accounts.map(a=>a.name),'Total'];
+  if(isPre)hdrs.push('Contributions');
+  if(hasSSI)hdrs.push(cfg.ss.name);
+  if(hasOther)cfg.incomeStreams.forEach(s=>hdrs.push(s.name));
+  hdrs.push('SpendTarget','NetWithdrawal','RMD');
+  if(hasRoth)hdrs.push('RothConv','Bracket','ConvTax');
+  hdrs.push('EstTax');
+  const csvRows=[hdrs.join(',')];
+  tableRows.forEach(r=>{
+    const row=[r.year,r.age,r.isRet?'Retired':'Pre-ret',r.filing.status,r.filing.stdDed,...r.accts.map(a=>Math.round(a.balance)),Math.round(r.total)];
+    if(isPre)row.push(!r.isRet?cfg.contribs.reduce((s,c)=>s+c.annual+c.match,0):0);
+    if(hasSSI)row.push(Math.round(r.ssIncome));
+    if(hasOther)cfg.incomeStreams.forEach(s=>{const inc=r.otherIncome.find(o=>o.name===s.name);row.push(inc?Math.round(inc.amount):0);});
+    row.push(Math.round(r.wdTarget),Math.round(r.netWithdrawal),Math.round(r.rmd));
+    if(hasRoth){row.push(r.roth?r.roth.amount:0,r.roth?r.roth.bracket+'%':'',r.roth?r.roth.taxCost:0);}
+    row.push(r.tax);
+    csvRows.push(row.map(v=>typeof v==='string'&&v.includes(',')?`"${v}"`:v).join(','));
+  });
+  const blob=new Blob([csvRows.join('\n')],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='retirement_projection.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},500);
+}
+
+function exportPNG(id){const c=document.getElementById(id);if(!c)return;const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download=id+'.png';a.click();}
+
+// Chart options — fixed aspect ratio, always uses M/K suffix on Y axis
+function chartOpts(){
+  return{
+    responsive:true,
+    maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12,padding:10}},
+      tooltip:{backgroundColor:'#1a1d27',borderColor:'#2e3347',borderWidth:1,titleColor:'#e8eaf0',bodyColor:'#8892a4',
+        callbacks:{label:ctx=>{const v=ctx.parsed.y;if(!v&&v!==0)return'';const abs=Math.abs(v);const s=abs>=1e9?'$'+(v/1e9).toFixed(2)+'B':abs>=1e6?'$'+(v/1e6).toFixed(2)+'M':abs>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toLocaleString();return` ${ctx.dataset.label}: ${s}`;}}}
+    },
+    scales:{
+      x:{ticks:{color:'#8892a4',font:{size:10},maxTicksLimit:14},grid:{color:'#2e3347'}},
+      y:{
+        ticks:{color:'#8892a4',font:{size:10},
+          callback:v=>{const abs=Math.abs(v);if(abs>=1e9)return'$'+(v/1e9).toFixed(1)+'B';if(abs>=1e6)return'$'+(v/1e6).toFixed(1)+'M';if(abs>=1e3)return'$'+(v/1e3).toFixed(0)+'K';return'$'+v;}
+        },
+        grid:{color:'#2e3347'}
+      }
+    }
+  };
+}
+
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ── Settings export / import ──────────────────────────────────────────────────
+function exportSettings(){
+  const cfg=readConfig();
+  // Capture raw HTML for sections that are dynamic (filing periods, withdrawal periods, income streams etc.)
+  const settings={
+    version:1,
+    basic:{curAge:cfg.cur,retAge:cfg.ret,endAge:cfg.endAge,rmdAge:cfg.rmdAge},
+    market:{infl:cfg.infl,stockR:cfg.stockR,bondR:cfg.bondR,blendStart:cfg.blendStart,blendEnd:cfg.blendEnd,below:cfg.below,above:cfg.above},
+    accounts:cfg.accounts,
+    contribs:cfg.contribs,
+    filingPeriods:cfg.filingPeriods,
+    ss:cfg.ss,
+    incomeStreams:cfg.incomeStreams,
+    rothPeriods:cfg.rothPeriods,
+    wdPeriods:cfg.wdPeriods,
+    baseScenario:cfg.baseScenario,
+    extraScenarios:cfg.extraScenarios,
+    // Also save raw withdrawal period allocs with names since readConfig processes them
+    wdPeriodsRaw:[...document.querySelectorAll('.wd-period')].map(p=>({
+      name:p.querySelector('.wd-period-name')?.value||'Period',
+      durYrs:p.querySelector('.wd-dur-yrs')?.value||'',
+      durSel:p.querySelector('.wd-dur-sel')?.value||'depleted',
+      allocs:[...p.querySelectorAll('.wd-alloc-row')].map(r=>({
+        account:r.querySelector('.wd-acct-sel')?.options[r.querySelector('.wd-acct-sel').selectedIndex]?.text||'',
+        pct:r.querySelector('.wd-pct')?.value||''
+      }))
+    }))
+  };
+  const json=JSON.stringify(settings,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='retireplan_settings_'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},500);
+}
+
+function importSettings(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const s=JSON.parse(e.target.result);
+      if(!s.version)throw new Error('Not a valid RetirePlan settings file');
+      applySettings(s);
+      alert('Settings loaded successfully.');
+    }catch(err){
+      alert('Could not load settings: '+err.message);
+    }
+    event.target.value=''; // reset file input so same file can be re-imported
+  };
+  reader.readAsText(file);
+}
+
+function applySettings(s){
+  // Basic
+  if(s.basic){
+    document.getElementById('cur-age').value=s.basic.curAge||35;
+    document.getElementById('ret-age').value=s.basic.retAge||65;
+    document.getElementById('end-age').value=s.basic.endAge||95;
+    document.getElementById('rmd-age').value=s.basic.rmdAge||73;
+    updateMode();
+  }
+  // Market
+  if(s.market){
+    document.getElementById('infl').value=s.market.infl??3.0;
+    document.getElementById('stock').value=s.market.stockR??7.0;
+    document.getElementById('bond').value=s.market.bondR??4.67;
+    document.getElementById('blend-start').value=s.market.blendStart??70;
+    document.getElementById('blend-end').value=s.market.blendEnd??50;
+    document.getElementById('below').value=s.market.below??2.0;
+    document.getElementById('above').value=s.market.above??2.0;
+  }
+  // Accounts
+  if(s.accounts?.length){
+    document.getElementById('accts').innerHTML='';
+    s.accounts.forEach(a=>{
+      const d=document.createElement('div');d.className='ri acct';
+      d.innerHTML=`<input type="text" value="${esc(a.name)}"><input type="number" value="${a.balance}"><select>${['Tax-deferred','Tax-free (Roth)','Taxable LTCG','Cash/MM'].map(t=>`<option${t===a.type?' selected':''}>${t}</option>`).join('')}</select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+      document.getElementById('accts').appendChild(d);
+    });
+  }
+  // Contributions
+  document.getElementById('contrib-entries').innerHTML='';
+  if(s.contribs?.length){
+    const acctNames=(s.accounts||[]).map(a=>a.name);
+    s.contribs.forEach(c=>{
+      const opts=acctNames.map(n=>`<option${n===c.account?' selected':''}>${n}</option>`).join('');
+      const stopOpts=['At retirement','Age 60','Age 62','Age 65','Age 70'].map(o=>`<option${o===c.stopAt||String(c.stopAt)===o?' selected':''}>${o}</option>`).join('');
+      const d=document.createElement('div');d.className='ri contrib';
+      d.innerHTML=`<select>${opts}</select><input type="number" value="${c.annual||''}"><input type="number" value="${c.match||''}"><select>${stopOpts}</select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+      document.getElementById('contrib-entries').appendChild(d);
+    });
+  }
+  // Filing periods
+  if(s.filingPeriods?.length){
+    document.getElementById('filing-periods').innerHTML='';
+    s.filingPeriods.forEach((fp,i)=>{
+      const statusOpts=['single','mfj','mfs','hoh'].map(v=>`<option value="${v}"${v===fp.status?' selected':''}>${{single:'Single',mfj:'Married filing jointly',mfs:'Married filing separately',hoh:'Head of household'}[v]}</option>`).join('');
+      const d=document.createElement('div');d.className='filing-row';
+      if(i===0){
+        d.innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:7px;">Initial status — from plan start</div><div class="fr-grid"><div></div><div><label class="fl">Filing status</label><select class="fp-sel" onchange="updDed(this)">${statusOpts}</select></div><div><label class="fl">Std deduction (auto)</label><div class="std-ded-disp">${DEDS[fp.status]||'$32,200'}</div></div></div>`;
+      } else {
+        d.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><span style="font-size:11px;color:var(--muted);">Status change</span><button class="rmbtn" onclick="this.closest('.filing-row').remove()">×</button></div><div class="fr-grid"><div><label class="fl">From age</label><input type="number" value="${fp.fromAge}" style="width:100%;"></div><div><label class="fl">New filing status</label><select class="fp-sel" onchange="updDed(this)">${statusOpts}</select></div><div><label class="fl">Std deduction</label><div class="std-ded-disp">${DEDS[fp.status]||'$32,200'}</div></div></div>`;
+      }
+      document.getElementById('filing-periods').appendChild(d);
+    });
+  }
+  // SS
+  if(s.ss){
+    document.getElementById('ss-name').value=s.ss.name||'My SS benefit';
+    document.getElementById('ss-start').value=s.ss.startAge||67;
+    document.getElementById('ss-amt').value=s.ss.annualAmt||'';
+    document.getElementById('ss-cola').value=s.ss.cola??3.3;
+    const taxSel=document.getElementById('ss-tax');
+    [...taxSel.options].forEach(o=>{if(o.text===s.ss.taxability)o.selected=true;});
+  } else {
+    document.getElementById('ss-start').value=67;
+    document.getElementById('ss-amt').value='';
+    document.getElementById('ss-cola').value=3.3;
+  }
+  // Other income streams
+  document.getElementById('income-streams').innerHTML='';
+  if(s.incomeStreams?.length){
+    s.incomeStreams.forEach(inc=>{
+      const typeOpts=['Pension','Annuity','Rental income','Part-time work','Spousal SS','Other'].map(t=>`<option${t===inc.type?' selected':''}>${t}</option>`).join('');
+      const taxOpts=['100% taxable (ordinary income)','85% taxable (SS standard)','Tax-free','LTCG rates'].map(t=>`<option${t===inc.taxability?' selected':''}>${t}</option>`).join('');
+      const d=document.createElement('div');d.className='income-card';
+      d.innerHTML=`<div class="income-hdr"><div style="display:flex;align-items:center;gap:8px;"><select style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);width:auto;">${typeOpts}</select><input type="text" value="${esc(inc.name)}" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:150px;color:var(--text);"></div><button class="rmbtn" onclick="this.closest('.income-card').remove()">×</button></div><div class="g4"><div><label class="fl">Start age</label><input type="number" value="${inc.startAge||''}"></div><div><label class="fl">End age</label><input type="number" value="${inc.endAge||''}"></div><div><label class="fl">Annual $ (today's $)</label><input type="number" value="${inc.annualAmt||''}"></div><div><label class="fl">COLA %</label><input type="number" value="${inc.cola||''}" step="0.1"></div></div><div class="g2" style="margin-top:9px;"><div><label class="fl">Taxability</label><select>${taxOpts}</select></div><div><label class="fl">Notes</label><input type="text" value=""></div></div>`;
+      document.getElementById('income-streams').appendChild(d);
+    });
+  }
+  // Roth periods
+  document.getElementById('roth-entries').innerHTML='';
+  const rothToLoad=s.rothPeriods?.length?s.rothPeriods:s.wdPeriods?[]:[{fromAge:s.basic?.curAge||35,toAge:s.basic?.curAge||35,amount:0,bracket:24}];
+  rothToLoad.forEach(r=>{
+    if(!r.fromAge)return;
+    const bOpts=[10,12,22,24,32,35,37].map(b=>`<option${b===r.bracket?' selected':''}>${b}%</option>`).join('');
+    const d=document.createElement('div');d.className='ri roth';
+    d.innerHTML=`<input type="number" value="${r.fromAge}"><input type="number" value="${r.toAge}"><input type="number" value="${r.amount||''}"><select>${bOpts}</select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+    document.getElementById('roth-entries').appendChild(d);
+  });
+  // Withdrawal periods
+  document.getElementById('wd-periods').innerHTML='';
+  wdPeriodCount=0;
+  const rawPeriods=s.wdPeriodsRaw||[];
+  if(rawPeriods.length){
+    document.getElementById('wd-note').style.display='none';
+    rawPeriods.forEach((p,idx)=>{
+      wdPeriodCount++;
+      const container=document.getElementById('wd-periods');
+      if(idx>0){const c=document.createElement('div');c.className='wd-conn';c.textContent='then ↓';container.appendChild(c);}
+      const acctOpts=(s.accounts||[]).map(a=>`<option>${a.name}</option>`).join('');
+      const num=idx+1;
+      const d=document.createElement('div');d.className='wd-period';d.id='wdp-'+wdPeriodCount;
+      const allocRows=p.allocs.map(a=>{
+        const aopts=(s.accounts||[]).map(ac=>`<option${ac.name===a.account?' selected':''}>${ac.name}</option>`).join('');
+        return `<div class="wd-alloc-row"><select class="wd-acct-sel" onchange="checkPctTotal(this)">${aopts}</select><input type="number" class="pct-input wd-pct" min="0" max="100" value="${a.pct}" oninput="checkPctTotal(this)"><button class="rmbtn" onclick="removeAllocRow(this)">×</button></div>`;
+      }).join('');
+      const totalPct=p.allocs.reduce((s,a)=>s+(parseFloat(a.pct)||0),0);
+      const pctOk=Math.abs(totalPct-100)<0.01||totalPct===0;
+      d.innerHTML=`<div class="wd-period-hdr"><div class="wd-period-num">${num}</div><input class="wd-period-name" type="text" value="${esc(p.name)}"><div class="wd-period-dur"><input type="number" min="1" value="${p.durYrs}" placeholder="yrs" class="wd-dur-yrs" oninput="syncPeriodDur(this,'yrs');checkPctTotal(this);" ${p.durYrs?'':''}><span>or</span><select class="wd-dur-sel" onchange="syncPeriodDur(this,'sel');checkPctTotal(this);"><option value="">— pick —</option><option value="depleted"${p.durSel==='depleted'?' selected':''}>Until depleted</option></select></div><button class="rmbtn" onclick="removeWdPeriod(this)">×</button></div><div class="wd-alloc-hdrs"><span>Account</span><span style="text-align:center;">% of net need</span><span></span></div><div class="wd-allocs">${allocRows}</div><button class="btn-link" onclick="addAllocRow(this)" style="margin-top:4px;">+ Add account</button><div class="pct-total ${pctOk?'pct-ok':'pct-warn'}" id="pct-total-wdp-${wdPeriodCount}" style="margin-top:6px;">Total: ${totalPct.toFixed(0)}% of net need</div><div class="wd-fallback-note">If any account runs dry mid-period, its share is automatically covered by the other accounts in this period.</div>`;
+      container.appendChild(d);
+      // Sync duration controls
+      if(p.durYrs){const sel=d.querySelector('.wd-dur-sel');if(sel)sel.classList.add('greyed');}
+      else if(p.durSel){const yrs=d.querySelector('.wd-dur-yrs');if(yrs)yrs.classList.add('greyed');}
+    });
+  } else {
+    document.getElementById('wd-note').style.display='';
+  }
+  // Withdrawal scenarios
+  if(s.baseScenario){
+    document.getElementById('base-amt').value=s.baseScenario.amount||'';
+    document.getElementById('base-lbl').value=s.baseScenario.label||'Base plan';
+    document.getElementById('base-dur').value=s.baseScenario.type||'all';
+    document.getElementById('base-stepdown').style.display=s.baseScenario.type==='c'?'block':'none';
+    if(s.baseScenario.type==='c'){
+      document.getElementById('base-a1').value=s.baseScenario.a1||'';
+      document.getElementById('base-y1').value=s.baseScenario.y1||'';
+      document.getElementById('base-a2').value=s.baseScenario.a2||'';
+    }
+  }
+  document.getElementById('extra-scenarios').innerHTML='';
+  scCount=0;
+  if(s.extraScenarios?.length){
+    s.extraScenarios.forEach(sc=>{
+      scCount++;
+      const d=document.createElement('div');d.className='scenario-card';
+      d.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;"><input type="text" class="sc-label" value="${esc(sc.label)}" style="border:none;background:transparent;padding:0;font-size:13px;font-weight:500;color:var(--text);flex:1;"><button class="rmbtn" onclick="this.closest('.scenario-card').remove()">×</button></div><div class="g3"><div><label class="fl">Annual spend target ($)</label><input type="number" class="sc-amt" value="${sc.amount||''}"></div><div><label class="fl">Duration</label><select class="sc-dur" onchange="this.closest('.scenario-card').querySelector('.sc-stepdown').style.display=this.value==='c'?'block':'none'"><option value="all"${sc.type!=='c'?' selected':''}>All years</option><option value="c"${sc.type==='c'?' selected':''}>Custom step-down</option></select></div><div><label class="fl">Notes</label><input type="text" placeholder="e.g. higher early spend"></div></div><div class="sc-stepdown" style="display:${sc.type==='c'?'block':'none'};margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><div class="g2" style="margin-bottom:7px;"><div><label class="fl">First period amount ($)</label><input type="number" class="sc-a1" value="${sc.a1||''}"></div><div><label class="fl">For how many years</label><input type="number" class="sc-y1" value="${sc.y1||''}"></div></div><div class="g2"><div><label class="fl">Then amount ($/yr)</label><input type="number" class="sc-a2" value="${sc.a2||''}"></div><div><label class="fl">Remaining years</label><input type="text" value="All remaining" disabled style="opacity:.5;"></div></div></div>`;
+      document.getElementById('extra-scenarios').appendChild(d);
+    });
+  }
+}
+
+function esc(str){return(str||'').replace(/"/g,'\u0026quot;').replace(/</g,'\u0026lt;').replace(/>/g,'\u0026gt;');}
+
+updateMode();
+renderSaved();
+</script>
+
+<!-- Footer -->
+<div class="footer-bar" style="position:sticky;bottom:0;z-index:10;">
+  <span>© 2025 RetirePlan &nbsp;·&nbsp; Free retirement planning tool &nbsp;·&nbsp; All calculations run locally in your browser — no data is sent to any server.</span>
+  <span style="display:flex;gap:16px;">
+    <a href="privacy.html" target="_blank">Privacy Policy</a>
+    <a href="privacy.html#disclaimer" target="_blank">Disclaimer</a>
+    <a href="mailto:hello@yourdomain.com">Contact</a>
+  </span>
+</div>
+
+</body>
+</html>
