@@ -836,9 +836,10 @@ function getWdTarget(age,sc,ret,infl){
 
 // Withdraw netWd from accounts using the period schedule.
 function withdrawFromSchedule(accts,netWd,wdState,cfg){
-  if(netWd<=0)return{accts,wdState,wdByType:{tradIRA:0,roth:0,taxable:0,cash:0}};
+  if(netWd<=0)return{accts,wdState,wdByType:{tradIRA:0,roth:0,taxable:0,cash:0},acctWd:{}};
   let rem=netWd;
   const wdByType={tradIRA:0,roth:0,taxable:0,cash:0};
+  const acctWd={}; // per-account withdrawal amounts by name
 
   function typeKey(type){
     if(type==='Tax-deferred')return'tradIRA';
@@ -847,7 +848,6 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
     return'cash';
   }
 
-  // Case-insensitive name match to avoid whitespace/case mismatches
   function findAcct(name){
     const n=name.trim().toLowerCase();
     return accts.findIndex(ac=>ac.name.trim().toLowerCase()===n);
@@ -858,6 +858,7 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
     const take=Math.min(amount,accts[idx].balance);
     accts[idx].balance=Math.max(0,accts[idx].balance-take);
     wdByType[typeKey(accts[idx].type)]+=take;
+    acctWd[accts[idx].name]=(acctWd[accts[idx].name]||0)+take;
     return take;
   }
 
@@ -921,7 +922,7 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
     }
   }
 
-  return{accts,wdState,wdByType};
+  return{accts,wdState,wdByType,acctWd};
 }
 
 function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState){
@@ -980,7 +981,7 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState){
     tax+=ltcgGain*ltcgRate;
   }
 
-  return{accts:finalAccts,tax:Math.round(tax),ssIncome,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,wdState:result.wdState};
+  return{accts:finalAccts,tax:Math.round(tax),ssIncome,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
 }
 
 function makeWdState(cfg){
@@ -1000,7 +1001,7 @@ function simulate(cfg,scenario,offset=0,crashes=[]){
     const result=simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState);
     state=result.accts;
     wdState=result.wdState;
-    years.push({age,year:yr,isRet:age>=cfg.ret,filing:getFiling(age,cfg.filingPeriods),...result,total:result.accts.reduce((s,a)=>s+a.balance,0),wdTarget:wdAmt});
+    years.push({age,year:yr,isRet:age>=cfg.ret,filing:getFiling(age,cfg.filingPeriods),...result,total:result.accts.reduce((s,a)=>s+a.balance,0),wdTarget:wdAmt,acctWd:result.acctWd||{}});
   }
   return years;
 }
@@ -1091,7 +1092,7 @@ function renderChart(){
     ];
   } else {
     datasets=cfg.accounts.map((a,i)=>({label:a.name,data:rows.map(r=>Math.round(r.accts[i]?.balance||0)),borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length]+'18',borderWidth:2,pointRadius:0,fill:false,tension:.3}));
-    datasets.push({label:'Total portfolio',data:rows.map(r=>Math.round(r.total)),borderColor:'#fff',backgroundColor:'#ffffff10',borderWidth:2.5,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]});
+    datasets.push({label:'Total portfolio',data:rows.map(r=>Math.round(r.total)),borderColor:'#fff',backgroundColor:'#ffffff10',borderWidth:2,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]});
   }
 
   destroyChart('main-chart');
@@ -1122,7 +1123,7 @@ function buildBalanceTable(rows,cfg,view){
     const phase=r.isRet?'Retired':'Pre-ret';
     const br=(phase!==prevPhase&&prevPhase!==null)?' class="phase-break"':'';prevPhase=phase;
     tb+=`<tr${br}><td>${r.year}</td><td>${r.age}</td><td>${phase}</td>`;
-    r.accts.forEach(a=>tb+=`<td class="${a.balance<=0?'dep':'ab'}">${fmt(a.balance)}</td>`);
+    r.accts.forEach((a,i)=>{const isActive=r.acctWd&&r.acctWd[cfg.accounts[i]?.name]>0;tb+=`<td class="${a.balance<=0?'dep':'ab'}" style="${isActive?'font-weight:700;background:rgba(79,156,249,.1);color:#93c5fd;':''}"><span>${isActive?'▶ ':''}</span>${fmt(a.balance)}</td>`;});
     tb+=`<td class="${r.total>0?'pos':'neg'}" style="font-weight:600;">${fmt(r.total)}</td></tr>`;
   });
   document.getElementById('bal-tbody').innerHTML=tb;
@@ -1145,7 +1146,7 @@ function buildDetailTable(rows,cfg,view){
     const phase=r.isRet?'Retired':'Pre-ret';
     const br=(phase!==prevPhase&&prevPhase!==null)?' class="phase-break"':'';prevPhase=phase;
     tb+=`<tr${br}><td>${r.year}</td><td>${r.age}</td><td>${phase}</td>`;
-    r.accts.forEach(a=>tb+=`<td class="${a.balance<=0?'dep':'ab'}">${fmt(a.balance)}</td>`);
+    r.accts.forEach((a,i)=>{const isActive=r.acctWd&&r.acctWd[cfg.accounts[i]?.name]>0;tb+=`<td class="${a.balance<=0?'dep':'ab'}" style="${isActive?'font-weight:700;background:rgba(79,156,249,.1);color:#93c5fd;':''}"><span>${isActive?'▶ ':''}</span>${fmt(a.balance)}</td>`;});
     tb+=`<td class="${r.total>0?'pos':'neg'}">${fmt(r.total)}</td>`;
     if(isPre)tb+=`<td class="${!r.isRet?'pos':'zer'}">${!r.isRet?fmt(cfg.contribs.reduce((s,c)=>s+c.annual+c.match,0)):'—'}</td>`;
     if(hasSSI)tb+=`<td>${r.ssIncome>0?fmt(r.ssIncome):'—'}</td>`;
