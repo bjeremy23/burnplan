@@ -835,13 +835,9 @@ function getWdTarget(age,sc,ret,infl){
 }
 
 // Withdraw netWd from accounts using the period schedule.
-// Each period lists accounts with % allocations. Concurrent accounts are drawn simultaneously.
-// If one account in a period runs dry, the other accounts in that period cover its shortfall.
-// After all scheduled accounts are dry, any remaining need comes from unscheduled accounts in entry order.
 function withdrawFromSchedule(accts,netWd,wdState,cfg){
   if(netWd<=0)return{accts,wdState,wdByType:{tradIRA:0,roth:0,taxable:0,cash:0}};
   let rem=netWd;
-  // Track how much is withdrawn from each tax treatment
   const wdByType={tradIRA:0,roth:0,taxable:0,cash:0};
 
   function typeKey(type){
@@ -851,7 +847,14 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
     return'cash';
   }
 
+  // Case-insensitive name match to avoid whitespace/case mismatches
+  function findAcct(name){
+    const n=name.trim().toLowerCase();
+    return accts.findIndex(ac=>ac.name.trim().toLowerCase()===n);
+  }
+
   function takeFrom(idx,amount){
+    if(idx<0||accts[idx].balance<=0)return 0;
     const take=Math.min(amount,accts[idx].balance);
     accts[idx].balance=Math.max(0,accts[idx].balance-take);
     wdByType[typeKey(accts[idx].type)]+=take;
@@ -859,46 +862,58 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
   }
 
   const periods=wdState.periods;
+
+  // Find active period — skip periods that are exhausted
+  function isPeriodDone(p){
+    if(p.durType==='years')return p.elapsed>=p.durYears;
+    if(p.durType==='depleted'){
+      // All accounts in this period must be dry to consider it done
+      return p.allocs.every(a=>{const idx=findAcct(a.account);return idx<0||accts[idx].balance<=0;});
+    }
+    return false;
+  }
+
+  // Find the first non-done period
   let activePeriodIdx=-1;
   for(let i=0;i<periods.length;i++){
-    const p=periods[i];
-    if(p.durType==='depleted'){activePeriodIdx=i;break;}
-    if(p.durType==='years'&&p.elapsed<p.durYears){activePeriodIdx=i;break;}
+    if(!isPeriodDone(periods[i])){activePeriodIdx=i;break;}
   }
 
   if(activePeriodIdx>=0){
     const period=periods[activePeriodIdx];
-    const allocations=period.allocs.filter(a=>a.pct>0);
+    const allocations=period.allocs.filter(a=>a.pct>0&&findAcct(a.account)>=0);
+
     if(allocations.length>0){
       let remaining=rem;
       let iterations=0;
       while(remaining>0.01&&iterations<20){
         iterations++;
-        const available=allocations.map(a=>{const idx=accts.findIndex(ac=>ac.name===a.account);return idx>=0?accts[idx].balance:0;});
+        const available=allocations.map(a=>accts[findAcct(a.account)]?.balance||0);
         const totalAvail=available.reduce((s,v)=>s+v,0);
         if(totalAvail<=0)break;
+        // Each account takes its pct share, capped by its available balance
         const targets=allocations.map((a,i)=>Math.min(remaining*(a.pct/100),available[i]));
         const taken=targets.reduce((s,v)=>s+v,0);
-        targets.forEach((take,i)=>{const idx=accts.findIndex(ac=>ac.name===allocations[i].account);if(idx>=0)takeFrom(idx,take);});
+        if(taken<=0)break;
+        targets.forEach((take,i)=>takeFrom(findAcct(allocations[i].account),take));
         remaining-=taken;
       }
       rem=Math.max(0,remaining);
     }
-    period.elapsed=(period.elapsed||0)+1;
-    if(period.durType==='years'&&period.elapsed>=period.durYears){activePeriodIdx++;}
-    else if(period.durType==='depleted'){
-      const allDry=period.allocs.every(a=>{const idx=accts.findIndex(ac=>ac.name===a.account);return idx<0||accts[idx].balance<=0;});
-      if(allDry)activePeriodIdx++;
-    }
-    wdState.currentPeriod=activePeriodIdx;
+
+    // Advance elapsed for fixed-year periods
+    if(period.durType==='years')period.elapsed=(period.elapsed||0)+1;
   }
 
+  // Fallback: if rem remains, draw from accounts NOT in any scheduled period
   if(rem>0.01){
-    const scheduledAccounts=new Set((cfg.wdPeriods||[]).flatMap(p=>p.allocs.map(a=>a.account)));
+    const allScheduledNames=new Set((cfg.wdPeriods||[]).flatMap(p=>p.allocs.map(a=>a.account.trim().toLowerCase())));
+    // First pass: unscheduled accounts
     for(let i=0;i<accts.length&&rem>0.01;i++){
-      if(scheduledAccounts.size>0&&scheduledAccounts.has(accts[i].name))continue;
+      if(allScheduledNames.size>0&&allScheduledNames.has(accts[i].name.trim().toLowerCase()))continue;
       rem-=takeFrom(i,rem);
     }
+    // Second pass: any account (all scheduled ones depleted)
     if(rem>0.01){
       for(let i=0;i<accts.length&&rem>0.01;i++){
         rem-=takeFrom(i,rem);
