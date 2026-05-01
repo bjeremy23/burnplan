@@ -157,6 +157,10 @@ td.dep{color:var(--red)}
 .footer-bar{background:var(--surface);border-top:1px solid var(--border);padding:12px 26px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0}
 .footer-bar a{color:var(--muted);text-decoration:none}
 .footer-bar a:hover{color:var(--text)}
+.spend-step{display:grid;grid-template-columns:1fr 110px 24px;gap:7px;align-items:center;margin-bottom:6px;padding:7px 9px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.spend-step-last{grid-template-columns:1fr 110px;border-color:var(--accent2)}
+.spend-step-hdrs{display:grid;grid-template-columns:1fr 110px 24px;gap:7px;margin-bottom:5px}
+.spend-step-hdrs span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .empty-state{padding:40px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
 </style>
 </head>
@@ -336,18 +340,14 @@ td.dep{color:var(--red)}
     <div id="val-err" class="val-err">Base plan withdrawal amount is required.</div>
     <div class="scenario-card base">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;"><span class="badge badge-req">Base plan</span><span style="font-size:12px;color:var(--muted);">Required</span></div>
-      <div class="fg" style="margin-bottom:11px;">
+      <div class="fg" style="margin-bottom:13px;">
         <label class="fl" style="color:var(--accent);">Plan name <span style="color:var(--muted);font-style:italic;text-transform:none;letter-spacing:0;font-weight:400;">(shows in Projections &amp; Compare dropdowns)</span></label>
         <input type="text" id="base-lbl" value="Base plan" oninput="refreshScenarioDropdown()" placeholder="e.g. Conservative spend" style="font-size:14px;font-weight:500;">
       </div>
-      <div class="g2">
-        <div class="fg" style="margin:0;"><label class="fl">Annual spend target ($)</label><input type="number" id="base-amt" placeholder="e.g. 100000"></div>
-        <div class="fg" style="margin:0;"><label class="fl">Duration</label><select id="base-dur" onchange="document.getElementById('base-stepdown').style.display=this.value==='c'?'block':'none'"><option value="all">All years</option><option value="c">Custom step-down</option></select></div>
-      </div>
-      <div id="base-stepdown" style="display:none;margin-top:9px;padding-top:9px;border-top:1px solid var(--border);">
-        <div class="g2" style="margin-bottom:7px;"><div><label class="fl">First period amount ($)</label><input type="number" id="base-a1" placeholder="e.g. 120000"></div><div><label class="fl">For how many years</label><input type="number" id="base-y1" placeholder="e.g. 10"></div></div>
-        <div class="g2"><div><label class="fl">Then amount ($/yr)</label><input type="number" id="base-a2" placeholder="e.g. 100000"></div><div><label class="fl">Remaining years</label><input type="text" value="All remaining" disabled style="opacity:.5;"></div></div>
-      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Annual spend target in today's dollars — inflates automatically each year. Add steps to model spending that changes over time. The last step runs for all remaining years.</p>
+      <div class="spend-step-hdrs"><span>Annual spend ($)</span><span>Duration</span><span></span></div>
+      <div id="base-steps"></div>
+      <button class="btn-link" onclick="addSpendStep('base-steps')">+ Add spend period</button>
     </div>
     <div id="extra-scenarios"></div>
     <button class="btn-link" onclick="addScenario()" style="margin-top:7px;">+ Add comparison scenario</button>
@@ -674,9 +674,73 @@ function checkPctTotal(el){
   });
 }
 
+function addSpendStep(containerId,amount,years,isLast){
+  const container=typeof containerId==='string'?document.getElementById(containerId):containerId;
+  const d=document.createElement('div');
+  d.className='spend-step'+(isLast?' spend-step-last':'');
+  const amtIn=document.createElement('input');amtIn.type='number';amtIn.className='spend-amt';amtIn.placeholder='e.g. 100000';if(amount)amtIn.value=amount;
+  if(!isLast){
+    const yrsIn=document.createElement('input');yrsIn.type='number';yrsIn.className='spend-yrs';yrsIn.placeholder='e.g. 10';if(years)yrsIn.value=years;
+    const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='\u00d7';
+    btn.onclick=()=>{d.remove();refreshLastStep(container);};
+    d.appendChild(amtIn);d.appendChild(yrsIn);d.appendChild(btn);
+  } else {
+    const tag=document.createElement('div');
+    tag.style.cssText='font-size:11px;color:var(--accent2);background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:5px;padding:4px 9px;white-space:nowrap;line-height:1.4;text-align:center;';
+    tag.innerHTML='&#8734; All remaining<br><span style="font-size:10px;opacity:.7;">+ Add step above to limit</span>';
+    d.appendChild(amtIn);d.appendChild(tag);
+  }
+  container.appendChild(d);
+  refreshLastStep(container);
+}
+
+function refreshLastStep(container){
+  const steps=[...container.querySelectorAll('.spend-step')];
+  steps.forEach((s,i)=>{
+    const isLast=i===steps.length-1;
+    s.className='spend-step'+(isLast?' spend-step-last':'');
+    const yrsIn=s.querySelector('.spend-yrs');
+    const tag=s.querySelector('.spend-inf-tag');
+    if(isLast){
+      // Replace years input with infinity tag if not already done
+      if(yrsIn&&!tag){
+        const inf=document.createElement('div');
+        inf.className='spend-inf-tag';
+        inf.style.cssText='font-size:11px;color:var(--accent2);background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:5px;padding:4px 9px;white-space:nowrap;line-height:1.4;text-align:center;';
+        inf.innerHTML='&#8734; All remaining<br><span style="font-size:10px;opacity:.7;">+ Add step above to limit</span>';
+        yrsIn.replaceWith(inf);
+        // Also remove the × button from last step
+        const btn=s.querySelector('.rmbtn');if(btn)btn.remove();
+      }
+    } else {
+      // Replace infinity tag with years input if not already done
+      if(tag&&!yrsIn){
+        const inp=document.createElement('input');inp.type='number';inp.className='spend-yrs';inp.placeholder='e.g. 10';
+        tag.replaceWith(inp);
+        // Re-add × button if missing
+        if(!s.querySelector('.rmbtn')){
+          const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='\u00d7';
+          btn.onclick=()=>{s.remove();refreshLastStep(container);};
+          s.appendChild(btn);
+        }
+      }
+      if(yrsIn){yrsIn.disabled=false;yrsIn.style.opacity='1';}
+    }
+  });
+}
+
+function readSpendSteps(container){
+  return [...container.querySelectorAll('.spend-step')].map((s,i,arr)=>{
+    const amt=parseFloat(s.querySelector('.spend-amt')?.value)||0;
+    const yrs=i===arr.length-1?Infinity:parseInt(s.querySelector('.spend-yrs')?.value)||0;
+    return{amount:amt,years:yrs};
+  }).filter(s=>s.amount>0);
+}
+
 function addScenario(){
   scCount++;
   const d=document.createElement('div');d.className='scenario-card';
+  const stepsId='sc-steps-'+scCount;
   d.innerHTML=`
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
     <span class="badge badge-opt">Comparison scenario</span>
@@ -686,25 +750,13 @@ function addScenario(){
     <label class="fl" style="color:var(--accent);">Plan name <span style="color:var(--muted);font-style:italic;text-transform:none;letter-spacing:0;font-weight:400;">(shows in Projections &amp; Compare dropdowns)</span></label>
     <input type="text" class="sc-label" value="Scenario ${scCount+1}" oninput="refreshScenarioDropdown()" placeholder="e.g. Higher spend early" style="font-size:14px;font-weight:500;">
   </div>
-  <div class="g2">
-    <div><label class="fl">Annual spend target ($)</label><input type="number" class="sc-amt" placeholder="e.g. 120000"></div>
-    <div><label class="fl">Duration</label>
-      <select class="sc-dur" onchange="this.closest('.scenario-card').querySelector('.sc-stepdown').style.display=this.value==='c'?'block':'none'">
-        <option value="all">All years</option><option value="c">Custom step-down</option>
-      </select>
-    </div>
-  </div>
-  <div class="sc-stepdown" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-    <div class="g2" style="margin-bottom:7px;">
-      <div><label class="fl">First period amount ($)</label><input type="number" class="sc-a1" placeholder="e.g. 120000"></div>
-      <div><label class="fl">For how many years</label><input type="number" class="sc-y1" placeholder="e.g. 10"></div>
-    </div>
-    <div class="g2">
-      <div><label class="fl">Then amount ($/yr)</label><input type="number" class="sc-a2" placeholder="e.g. 100000"></div>
-      <div><label class="fl">Remaining years</label><input type="text" value="All remaining" disabled style="opacity:.5;"></div>
-    </div>
-  </div>`;
+  <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Annual spend in today's dollars. Add steps to model spending changes over time.</p>
+  <div class="spend-step-hdrs"><span>Annual spend ($)</span><span>For how many years</span><span></span></div>
+  <div id="${stepsId}"></div>
+  <button class="btn-link" onclick="addSpendStep('${stepsId}')">+ Add spend period</button>`;
   document.getElementById('extra-scenarios').appendChild(d);
+  // Add one default step
+  addSpendStep(stepsId);
 }
 function sortCrashEvents(container){
   const rows=[...container.querySelectorAll('.ri.crash')];
@@ -784,16 +836,13 @@ function readConfig(){
     return{name:p.querySelector('.wd-period-name')?.value||'Period',durType,durYears,allocs,elapsed:0};
   });
 
-  const baseDur=document.getElementById('base-dur').value;
-  const baseScenario={label:document.getElementById('base-lbl').value||'Base plan',amount:parseFloat(document.getElementById('base-amt').value)||0,type:baseDur,a1:parseFloat(document.getElementById('base-a1').value)||0,y1:parseInt(document.getElementById('base-y1').value)||0,a2:parseFloat(document.getElementById('base-a2').value)||0};
+  const baseSteps=readSpendSteps(document.getElementById('base-steps'));
+  const baseScenario={label:document.getElementById('base-lbl').value||'Base plan',steps:baseSteps,amount:baseSteps[baseSteps.length-1]?.amount||0};
   const extraScenarios=[...document.querySelectorAll('#extra-scenarios .scenario-card')].map(s=>{
     const label=s.querySelector('.sc-label')?.value||'Scenario';
-    const amount=parseFloat(s.querySelector('.sc-amt')?.value)||0;
-    const type=s.querySelector('.sc-dur')?.value||'all';
-    const a1=parseFloat(s.querySelector('.sc-a1')?.value)||0;
-    const y1=parseInt(s.querySelector('.sc-y1')?.value)||0;
-    const a2=parseFloat(s.querySelector('.sc-a2')?.value)||0;
-    return{label,amount,type,a1,y1,a2};
+    const stepsContainer=s.querySelector('[id^="sc-steps-"]');
+    const steps=stepsContainer?readSpendSteps(stepsContainer):[];
+    return{label,steps,amount:steps[steps.length-1]?.amount||0};
   });
   return{cur,ret,endAge,rmdAge,accounts,contribs,filingPeriods,ss,incomeStreams,rothPeriods,wdPeriods,baseScenario,extraScenarios,infl:parseFloat(document.getElementById('infl').value)||3.0,stockR:parseFloat(document.getElementById('stock').value)||7.0,bondR:parseFloat(document.getElementById('bond').value)||4.67,blendStart:parseFloat(document.getElementById('blend-start').value)||70,blendEnd:parseFloat(document.getElementById('blend-end').value)||50,below:parseFloat(document.getElementById('below').value)||2.0,above:parseFloat(document.getElementById('above').value)||2.0};
 }
@@ -830,8 +879,18 @@ function getWdTarget(age,sc,ret,infl){
   // Spend target grows with inflation each year from retirement age
   const yearsRetired=Math.max(0,age-ret);
   const inflFactor=Math.pow(1+(infl||3)/100,yearsRetired);
-  if(sc.type==='c'){const yr=age-ret;const base=yr<sc.y1?sc.a1:sc.a2;return base*inflFactor;}
-  return sc.amount*inflFactor;
+  // Multi-step schedule: sc.steps = [{amount, years}, ...]
+  if(sc.steps&&sc.steps.length>0){
+    let elapsed=yearsRetired;
+    for(let i=0;i<sc.steps.length;i++){
+      const step=sc.steps[i];
+      if(i===sc.steps.length-1||elapsed<step.years) return step.amount*inflFactor;
+      elapsed-=step.years;
+    }
+    return sc.steps[sc.steps.length-1].amount*inflFactor;
+  }
+  // Legacy single-amount fallback
+  return (sc.amount||0)*inflFactor;
 }
 
 // Withdraw netWd from accounts using the period schedule.
@@ -1044,8 +1103,8 @@ function simulate(cfg,scenario,offset=0,crashes=[]){
 
 // ── Projections ───────────────────────────────────────────────────────────────
 function runProjections(){
-  const ba=parseFloat(document.getElementById('base-amt').value);
-  if(!ba||ba<=0){document.getElementById('val-err').style.display='block';return;}
+  const baseStepsCheck=readSpendSteps(document.getElementById('base-steps'));
+  if(!baseStepsCheck.length||!baseStepsCheck[0].amount){document.getElementById('val-err').style.display='block';return;}
   document.getElementById('val-err').style.display='none';
   const cfg=readConfig();
   simData={
@@ -1605,6 +1664,8 @@ renderSaved();
 // Initialize default stress test crash row
 const defaultCrashContainer=document.getElementById('default-crash-events');
 if(defaultCrashContainer) defaultCrashContainer.appendChild(makeCrashRow(2028,38,4,'Market crash'));
+// Initialize base plan with one default spend step
+addSpendStep(document.getElementById('base-steps'));
 </script>
 
 <!-- Footer -->
