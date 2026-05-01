@@ -925,18 +925,18 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
   return{accts,wdState,wdByType,acctWd};
 }
 
-function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState){
+function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost,returnMultiplier){
   const accts=state.map(a=>({...a}));
   const isRet=age>=cfg.ret;
   const fp=getFiling(age,cfg.filingPeriods);
-  const r=getBlended(age,cfg,offset);
   const cf=1-(crashDrop||0);
+  const rm=returnMultiplier!==undefined?returnMultiplier:1.0;
   if(!isRet){
     cfg.contribs.forEach(c=>{if(age<c.stopAt){const idx=accts.findIndex(a=>a.name===c.account);if(idx>=0)accts[idx].balance+=c.annual+c.match;}});
-    accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset);a.balance=Math.max(0,a.balance*(1+rate)*cf);});
+    accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
     return{accts,tax:0,ssIncome:0,otherIncome:[],rmd:0,roth:null,netWithdrawal:0,totalIncome:0,wdState};
   }
-  accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset);a.balance=Math.max(0,a.balance*(1+rate)*cf);});
+  accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
   const ssIncome=getSS(age,cfg.ss,cfg.cur);
   const otherIncome=getOtherIncome(age,cfg.incomeStreams,cfg.cur);
   const totalIncome=ssIncome+otherIncome.reduce((s,i)=>s+i.amount,0);
@@ -993,12 +993,48 @@ function simulate(cfg,scenario,offset=0,crashes=[]){
   let state=cfg.accounts.map(a=>({...a}));
   let wdState=makeWdState(cfg);
   const baseYear=new Date().getFullYear();
+
+  // Track active recovery periods — during recovery, returns are suppressed
+  // (market climbs back gradually, not at full normal rate)
+  // Recovery model: in crash year portfolio drops by drop%.
+  // During recovery years, the market return is scaled down proportionally
+  // so that by end of recovery it has climbed back to pre-crash level.
+  // The permanent gap between stressed and unstressed comes from withdrawals
+  // made at depressed valuations during and after the crash.
+  const activeRecoveries=[];
+
   for(let age=cfg.cur;age<=cfg.endAge;age++){
     const yr=baseYear+(age-cfg.cur);
     const wdAmt=getWdTarget(age,scenario,cfg.ret,cfg.infl);
+
+    // Check for crash this year
     let crashDrop=0;
-    crashes.forEach(ce=>{if(yr===ce.year)crashDrop=ce.drop/100;});
-    const result=simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState);
+    crashes.forEach(ce=>{
+      if(yr===ce.year&&ce.drop>0){
+        crashDrop=ce.drop/100;
+        const N=Math.max(1,ce.recoveryYrs||1);
+        // During recovery, annual return is reduced — market climbs back but slowly
+        // Suppression factor: each recovery year earns only a fraction of normal return
+        // Model: return in recovery year = normal_return * recoveryFraction
+        // where recoveryFraction ramps from low to 1.0 over N years
+        activeRecoveries.push({startYear:yr+1,endYear:yr+N,totalYears:N,drop:crashDrop});
+      }
+    });
+
+    // Calculate return modifier from active recoveries
+    // During recovery: market hasn't fully healed, so returns are dampened
+    // We model this as: return = normalReturn * (yearInRecovery/totalYears)
+    // ramping from near 0 in year 1 to full return in year N
+    let returnMultiplier=1.0;
+    activeRecoveries.forEach(rec=>{
+      if(yr>=rec.startYear&&yr<=rec.endYear){
+        const yearInRecovery=yr-rec.startYear+1;
+        const ramp=yearInRecovery/rec.totalYears;
+        returnMultiplier=Math.min(returnMultiplier,ramp);
+      }
+    });
+
+    const result=simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,0,returnMultiplier);
     state=result.accts;
     wdState=result.wdState;
     years.push({age,year:yr,isRet:age>=cfg.ret,filing:getFiling(age,cfg.filingPeriods),...result,total:result.accts.reduce((s,a)=>s+a.balance,0),wdTarget:wdAmt,acctWd:result.acctWd||{}});
