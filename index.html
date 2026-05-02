@@ -79,7 +79,7 @@ select option{background:var(--surface2)}
 .btn-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:4px 0;font-family:var(--font)}
 .btn-link:hover{text-decoration:underline}
 .ri{display:grid;gap:7px;align-items:center;margin-bottom:7px}
-.ri.acct{grid-template-columns:1fr 110px 130px 24px}
+.ri.acct{grid-template-columns:1fr 110px 130px 90px 24px}
 .ri.contrib{grid-template-columns:1fr 95px 95px 100px 24px}
 .ri.roth{grid-template-columns:65px 65px 1fr 100px 24px}
 .ri.crash{grid-template-columns:75px 65px 95px 1fr 24px}
@@ -157,8 +157,8 @@ td.dep{color:var(--red)}
 .footer-bar{background:var(--surface);border-top:1px solid var(--border);padding:12px 26px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0}
 .footer-bar a{color:var(--muted);text-decoration:none}
 .footer-bar a:hover{color:var(--text)}
-.spend-step{display:grid;grid-template-columns:1fr 110px 24px;gap:7px;align-items:center;margin-bottom:6px;padding:7px 9px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
-.spend-step-last{grid-template-columns:1fr 110px;border-color:var(--accent2)}
+.spend-step{display:grid;grid-template-columns:1fr 140px 24px;gap:7px;align-items:center;margin-bottom:6px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.spend-step-last{grid-template-columns:1fr 140px;border-color:var(--accent2)}
 .spend-step-hdrs{display:grid;grid-template-columns:1fr 110px 24px;gap:7px;margin-bottom:5px}
 .spend-step-hdrs span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .empty-state{padding:40px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
@@ -229,7 +229,8 @@ td.dep{color:var(--red)}
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Accounts <span class="badge badge-req">required</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
     <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">If no withdrawal schedule is set, accounts are drawn in entry order until depleted.</p>
-    <div class="colhdr acct" style="display:grid;grid-template-columns:1fr 110px 130px 24px;gap:7px;"><span>Account name</span><span>Balance ($)</span><span>Tax treatment</span><span></span></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;"><strong style="color:var(--text);">Return %</strong> — optionally override the global market assumption for a specific account. Leave blank to use the global blended stock/bond rate from Market assumptions. Useful if one account is bonds-only, one is all-stock, or you have a fixed-rate instrument.</p>
+    <div class="colhdr acct" style="display:grid;grid-template-columns:1fr 110px 130px 90px 24px;gap:7px;"><span>Account name</span><span>Balance ($)</span><span>Tax treatment</span><span>Return % override <span class="fhint">blank = global</span></span><span></span></div>
     <div id="accts"></div>
     <button class="btn-link" onclick="addAcct()">+ Add account</button>
   </div>
@@ -287,7 +288,7 @@ td.dep{color:var(--red)}
     <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">SS is a lifetime benefit — no end age. Enter your estimated benefit in <strong style="color:var(--text);">today's dollars at your current age</strong> (as shown on ssa.gov). COLA will be applied from your current age forward, so by the time you claim at your chosen start age the benefit will already reflect years of cost-of-living increases. Leave all fields blank to exclude.</p>
     <div class="income-card" style="border-color:rgba(34,197,94,.2);">
       <div class="income-hdr">
-        <div style="display:flex;align-items:center;gap:8px;"><span class="income-tag ss-tag">Social Security</span><input type="text" id="ss-name" value="My SS benefit" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:170px;color:var(--text);"></div>
+        <div style="display:flex;align-items:center;gap:8px;"><span class="income-tag ss-tag">Social Security</span><input type="text" id="ss-name" value="SS" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:120px;color:var(--text);"></div>
         <span style="font-size:11px;color:var(--muted);">Lifetime — no end age</span>
       </div>
       <div class="g3">
@@ -323,6 +324,23 @@ td.dep{color:var(--red)}
 </div>
 
 <div class="panel">
+  <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">One-time events <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
+  <div class="panel-body">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Deposits add directly to an account in that year (inheritance, bonus, home sale proceeds). Withdrawals reduce an account (home purchase, large expense, gift). Events are applied at the start of the year before growth and withdrawals.</p>
+    <div style="display:grid;grid-template-columns:90px 1fr 120px 110px 100px 24px;gap:7px;margin-bottom:5px;">
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Year</span>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Description</span>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Account</span>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Amount ($)</span>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Type</span>
+      <span></span>
+    </div>
+    <div id="one-time-events"></div>
+    <button class="btn-link" onclick="addOneTimeEvent()">+ Add event</button>
+  </div>
+</div>
+
+<div class="panel">
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Withdrawal schedule <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
     <p style="font-size:12px;color:var(--muted);margin-bottom:4px;">Define periods in order — they run <strong style="color:var(--text);">sequentially</strong>. Each period runs until its duration ends, then the next begins.</p>
@@ -344,10 +362,14 @@ td.dep{color:var(--red)}
         <label class="fl" style="color:var(--accent);">Plan name <span style="color:var(--muted);font-style:italic;text-transform:none;letter-spacing:0;font-weight:400;">(shows in Projections &amp; Compare dropdowns)</span></label>
         <input type="text" id="base-lbl" value="Base plan" oninput="refreshScenarioDropdown()" placeholder="e.g. Conservative spend" style="font-size:14px;font-weight:500;">
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Annual spend target in today's dollars — inflates automatically each year. Add steps to model spending that changes over time. The last step runs for all remaining years.</p>
-      <div class="spend-step-hdrs"><span>Annual spend ($)</span><span>Duration</span><span></span></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Annual spend target in today's dollars — inflates automatically each year. Add steps to model spending that changes over time. The last step always runs for all remaining years.</p>
+      <div class="spend-step-hdrs" style="display:grid;grid-template-columns:1fr 140px 24px;gap:7px;margin-bottom:5px;">
+        <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Annual spend ($)</span>
+        <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Duration</span>
+        <span></span>
+      </div>
       <div id="base-steps"></div>
-      <button class="btn-link" onclick="addSpendStep('base-steps')">+ Add spend period</button>
+      <button class="btn-link" onclick="addSpendStep('base-steps')" style="margin-top:4px;">+ Add another spend period</button>
     </div>
     <div id="extra-scenarios"></div>
     <button class="btn-link" onclick="addScenario()" style="margin-top:7px;">+ Add comparison scenario</button>
@@ -361,7 +383,7 @@ td.dep{color:var(--red)}
     Import settings
     <input type="file" accept=".json" onchange="importSettings(event)" style="display:none;">
   </label>
-  <button class="btn" onclick="if(confirm('Reset all inputs?'))location.reload()">Reset all</button>
+  <button class="btn" onclick="if(confirm('Reset all inputs to defaults?')){window.location.href=window.location.href.split('?')[0]+'?t='+Date.now();}">Reset all</button>
 </div>
 </div>
 
@@ -548,9 +570,10 @@ function addAcct(){
   const bi=document.createElement('input');bi.type='number';bi.placeholder='Balance';
   const sel=document.createElement('select');
   ['Tax-deferred','Tax-free (Roth)','Taxable LTCG','Cash/MM'].forEach(t=>{const o=document.createElement('option');o.textContent=t;sel.appendChild(o);});
+  const ri=document.createElement('input');ri.type='number';ri.placeholder='e.g. 7.0';ri.step='0.1';ri.title='Override return % for this account (blank = use global blended rate)';
   const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='×';
   btn.onclick=()=>d.remove();
-  [ni,bi,sel,btn].forEach(el=>d.appendChild(el));
+  [ni,bi,sel,ri,btn].forEach(el=>d.appendChild(el));
   document.getElementById('accts').appendChild(d);
 }
 function getAcctNames(){return[...document.querySelectorAll('#accts .ri')].map(r=>r.querySelector('input[type=text]').value||'Account');}
@@ -562,12 +585,71 @@ function addFilingPeriod(){
   d.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><span style="font-size:11px;color:var(--muted);">Status change</span><button class="rmbtn" onclick="this.closest('.filing-row').remove()">×</button></div><div class="fr-grid"><div><label class="fl">From age</label><input type="number" value="${defaultAge}" style="width:100%;"></div><div><label class="fl">New filing status</label><select class="fp-sel" onchange="updDed(this)"><option value="single">Single</option><option value="mfj" selected>Married filing jointly</option><option value="mfs">Married filing separately</option><option value="hoh">Head of household</option></select></div><div><label class="fl">Std deduction</label><div class="std-ded-disp">$32,200</div></div></div>`;
   document.getElementById('filing-periods').appendChild(d);
 }
-function addIncome(){const d=document.createElement('div');d.className='income-card';d.innerHTML=`<div class="income-hdr"><div style="display:flex;align-items:center;gap:8px;"><select style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);width:auto;"><option>Pension</option><option>Annuity</option><option>Rental income</option><option>Part-time work</option><option>Spousal SS</option><option>Other</option></select><input type="text" placeholder="Stream name" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:150px;color:var(--text);"></div><button class="rmbtn" onclick="this.closest('.income-card').remove()">×</button></div><div class="g4"><div><label class="fl">Start age</label><input type="number" placeholder="e.g. 65"></div><div><label class="fl">End age <span class="fhint">blank=forever</span></label><input type="number" placeholder="leave blank"></div><div><label class="fl">Annual $ (today's $)</label><input type="number" placeholder="e.g. 36000"></div><div><label class="fl">COLA % <span class="fhint">blank=0%</span></label><input type="number" placeholder="0" step="0.1"></div></div><div class="g2" style="margin-top:9px;"><div><label class="fl">Taxability</label><select><option>100% taxable (ordinary income)</option><option>85% taxable (SS standard)</option><option>Tax-free</option><option>LTCG rates</option></select></div><div><label class="fl">Notes</label><input type="text" placeholder="optional"></div></div>`;document.getElementById('income-streams').appendChild(d);}
+function addIncome(){
+  const d=document.createElement('div');d.className='income-card';
+  d.innerHTML=`
+  <div class="income-hdr">
+    <div style="display:flex;align-items:center;gap:8px;flex:1;">
+      <span class="income-tag" style="flex-shrink:0;">Income stream</span>
+      <input type="text" class="inc-name" placeholder="Name this stream e.g. Pension, Rental, Part-time..." style="font-size:13px;font-weight:500;flex:1;">
+    </div>
+    <button class="rmbtn" onclick="this.closest('.income-card').remove()">×</button>
+  </div>
+  <div class="g4" style="margin-top:9px;">
+    <div><label class="fl">Start age</label><input type="number" class="inc-start" placeholder="e.g. 65"></div>
+    <div><label class="fl">End age <span class="fhint">blank=forever</span></label><input type="number" class="inc-end" placeholder="leave blank"></div>
+    <div><label class="fl">Annual $ (today's $)</label><input type="number" class="inc-amt" placeholder="e.g. 36000"></div>
+    <div><label class="fl">COLA % <span class="fhint">blank=0%</span></label><input type="number" class="inc-cola" placeholder="0" step="0.1"></div>
+  </div>
+  <div style="margin-top:9px;">
+    <label class="fl">Taxability</label>
+    <select class="inc-tax" style="max-width:300px;">
+      <option>100% taxable (ordinary income)</option>
+      <option>85% taxable (SS standard)</option>
+      <option>Tax-free</option>
+      <option>LTCG rates</option>
+    </select>
+  </div>`;
+  document.getElementById('income-streams').appendChild(d);
+}
 function addRoth(){
   const curAge=parseInt(document.getElementById('cur-age').value)||35;
   const d=document.createElement('div');d.className='ri roth';
   d.innerHTML=`<input type="number" value="${curAge}" placeholder="From age"><input type="number" value="${curAge}" placeholder="To age"><input type="number" placeholder="$/yr"><select><option>10%</option><option>12%</option><option>22%</option><option selected>24%</option><option>32%</option><option>35%</option><option>37%</option></select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
   document.getElementById('roth-entries').appendChild(d);
+}
+
+function addOneTimeEvent(){
+  const baseYear=new Date().getFullYear();
+  const d=document.createElement('div');
+  d.style.cssText='display:grid;grid-template-columns:90px 1fr 120px 110px 100px 24px;gap:7px;align-items:center;margin-bottom:7px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;';
+
+  const yearIn=document.createElement('input');yearIn.type='number';yearIn.placeholder='Year';yearIn.value=baseYear;yearIn.style.textAlign='center';
+  const descIn=document.createElement('input');descIn.type='text';descIn.placeholder='e.g. Inheritance, Home purchase';
+
+  const acctSel=document.createElement('select');
+  function refreshAcctOpts(){
+    const names=getAcctNames().filter(n=>n&&n!=='Account');
+    acctSel.innerHTML=names.length
+      ? names.map(n=>`<option>${n}</option>`).join('')
+      : '<option value="">— add accounts first —</option>';
+  }
+  refreshAcctOpts();
+  acctSel.addEventListener('focus', refreshAcctOpts);
+
+  const amtIn=document.createElement('input');amtIn.type='number';amtIn.placeholder='Amount';
+
+  const typeSel=document.createElement('select');
+  [['deposit','⬆ Deposit (add)'],['withdrawal','⬇ Withdrawal (remove)']].forEach(([v,l])=>{
+    const o=document.createElement('option');o.value=v;o.textContent=l;typeSel.appendChild(o);
+  });
+  typeSel.addEventListener('change',()=>{
+    d.style.borderColor=typeSel.value==='deposit'?'rgba(34,197,94,.35)':'rgba(239,68,68,.35)';
+  });
+
+  const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='×';btn.onclick=()=>d.remove();
+  [yearIn,descIn,acctSel,amtIn,typeSel,btn].forEach(el=>d.appendChild(el));
+  document.getElementById('one-time-events').appendChild(d);
 }
 
 // ── Withdrawal period builder ─────────────────────────────────────────────────
@@ -751,9 +833,13 @@ function addScenario(){
     <input type="text" class="sc-label" value="Scenario ${scCount+1}" oninput="refreshScenarioDropdown()" placeholder="e.g. Higher spend early" style="font-size:14px;font-weight:500;">
   </div>
   <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Annual spend in today's dollars. Add steps to model spending changes over time.</p>
-  <div class="spend-step-hdrs"><span>Annual spend ($)</span><span>For how many years</span><span></span></div>
+  <div class="spend-step-hdrs" style="display:grid;grid-template-columns:1fr 140px 24px;gap:7px;margin-bottom:5px;">
+    <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Annual spend ($)</span>
+    <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Duration</span>
+    <span></span>
+  </div>
   <div id="${stepsId}"></div>
-  <button class="btn-link" onclick="addSpendStep('${stepsId}')">+ Add spend period</button>`;
+  <button class="btn-link" onclick="addSpendStep('${stepsId}')" style="margin-top:4px;">+ Add another spend period</button>`;
   document.getElementById('extra-scenarios').appendChild(d);
   // Add one default step
   addSpendStep(stepsId);
@@ -811,13 +897,31 @@ function readConfig(){
   const ret=parseInt(document.getElementById('ret-age').value)||65;
   const endAge=parseInt(document.getElementById('end-age').value)||95;
   const rmdAge=parseInt(document.getElementById('rmd-age').value)||73;
-  const accounts=[...document.querySelectorAll('#accts .ri')].map(r=>{const ins=r.querySelectorAll('input,select');return{name:ins[0].value||'Account',balance:parseFloat(ins[1].value)||0,type:ins[2].value};});
+  const accounts=[...document.querySelectorAll('#accts .ri')].map(r=>{
+    const ins=r.querySelectorAll('input');
+    const sel=r.querySelector('select');
+    return{
+      name:ins[0]?.value||'Account',
+      balance:parseFloat(ins[1]?.value)||0,
+      type:sel?.value||'Tax-deferred',
+      customReturn:ins[2]?.value!==''&&ins[2]?.value!==undefined?parseFloat(ins[2].value):null
+    };
+  });
   const contribs=[...document.querySelectorAll('#contrib-entries .ri')].map(r=>{const sels=r.querySelectorAll('select');const ins=r.querySelectorAll('input');const stopStr=sels[1]?.options[sels[1].selectedIndex]?.text||'At retirement';const stopAge=stopStr==='At retirement'?ret:parseInt(stopStr.match(/\d+/)?.[0])||ret;return{account:sels[0]?.options[sels[0].selectedIndex]?.text,annual:parseFloat(ins[0]?.value)||0,match:parseFloat(ins[1]?.value)||0,stopAt:stopAge};});
   const filingPeriods=[...document.querySelectorAll('.filing-row')].map((fp,i)=>{const sel=fp.querySelector('.fp-sel');const ageIn=fp.querySelector('input[type=number]');return{fromAge:i===0?cur:parseInt(ageIn?.value)||cur,status:sel?.value||'mfj',stdDed:DEDV[sel?.value]||32200};});
   const ssStart=parseInt(document.getElementById('ss-start').value);
   const ssAmt=parseFloat(document.getElementById('ss-amt').value);
   const ss=(ssStart&&ssAmt)?{name:document.getElementById('ss-name').value||'SS',startAge:ssStart,annualAmt:ssAmt,cola:parseFloat(document.getElementById('ss-cola').value)||0,taxability:document.getElementById('ss-tax').value}:null;
-  const incomeStreams=[...document.querySelectorAll('#income-streams .income-card')].map(c=>{const sels=c.querySelectorAll('select');const ins=c.querySelectorAll('input[type=number]');const name=c.querySelector('input[type=text]')?.value||'Income';return{type:sels[0]?.options[sels[0].selectedIndex]?.text,name,startAge:parseInt(ins[0]?.value)||0,endAge:parseInt(ins[1]?.value)||null,annualAmt:parseFloat(ins[2]?.value)||0,cola:parseFloat(ins[3]?.value)||0,taxability:sels[1]?.options[sels[1].selectedIndex]?.text||'100% taxable (ordinary income)'};}).filter(s=>s.startAge&&s.annualAmt);
+  const incomeStreams=[...document.querySelectorAll('#income-streams .income-card')].map(c=>{
+    const name=c.querySelector('.inc-name')?.value||'Income';
+    const startAge=parseInt(c.querySelector('.inc-start')?.value)||0;
+    const endAge=parseInt(c.querySelector('.inc-end')?.value)||null;
+    const annualAmt=parseFloat(c.querySelector('.inc-amt')?.value)||0;
+    const cola=parseFloat(c.querySelector('.inc-cola')?.value)||0;
+    const taxSel=c.querySelector('.inc-tax');
+    const taxability=taxSel?.options[taxSel.selectedIndex]?.text||'100% taxable (ordinary income)';
+    return{name,startAge,endAge,annualAmt,cola,taxability};
+  }).filter(s=>s.startAge&&s.annualAmt);
   const rothPeriods=[...document.querySelectorAll('#roth-entries .ri')].map(r=>{const ins=r.querySelectorAll('input');const sel=r.querySelector('select');const bracket=parseFloat(sel?.options[sel.selectedIndex]?.text)||24;return{fromAge:parseInt(ins[0]?.value)||0,toAge:parseInt(ins[1]?.value)||0,amount:parseFloat(ins[2]?.value)||0,bracket};}).filter(r=>r.fromAge&&r.amount);
 
   // Read withdrawal periods
@@ -836,6 +940,17 @@ function readConfig(){
     return{name:p.querySelector('.wd-period-name')?.value||'Period',durType,durYears,allocs,elapsed:0};
   });
 
+  const oneTimeEvents=[...document.querySelectorAll('#one-time-events > div')].map(d=>{
+    const ins=d.querySelectorAll('input');
+    const sels=d.querySelectorAll('select');
+    return{
+      year:parseInt(ins[0]?.value)||0,
+      description:ins[1]?.value||'',
+      account:sels[0]?.options[sels[0].selectedIndex]?.text||'',
+      amount:parseFloat(ins[2]?.value)||0,
+      type:sels[1]?.value||'deposit'
+    };
+  }).filter(e=>e.year&&e.amount);
   const baseSteps=readSpendSteps(document.getElementById('base-steps'));
   const baseScenario={label:document.getElementById('base-lbl').value||'Base plan',steps:baseSteps,amount:baseSteps[baseSteps.length-1]?.amount||0};
   const extraScenarios=[...document.querySelectorAll('#extra-scenarios .scenario-card')].map(s=>{
@@ -844,14 +959,18 @@ function readConfig(){
     const steps=stepsContainer?readSpendSteps(stepsContainer):[];
     return{label,steps,amount:steps[steps.length-1]?.amount||0};
   });
-  return{cur,ret,endAge,rmdAge,accounts,contribs,filingPeriods,ss,incomeStreams,rothPeriods,wdPeriods,baseScenario,extraScenarios,infl:parseFloat(document.getElementById('infl').value)||3.0,stockR:parseFloat(document.getElementById('stock').value)||7.0,bondR:parseFloat(document.getElementById('bond').value)||4.67,blendStart:parseFloat(document.getElementById('blend-start').value)||70,blendEnd:parseFloat(document.getElementById('blend-end').value)||50,below:parseFloat(document.getElementById('below').value)||2.0,above:parseFloat(document.getElementById('above').value)||2.0};
+  return{cur,ret,endAge,rmdAge,accounts,contribs,filingPeriods,ss,incomeStreams,rothPeriods,oneTimeEvents,wdPeriods,baseScenario,extraScenarios,infl:parseFloat(document.getElementById('infl').value)||3.0,stockR:parseFloat(document.getElementById('stock').value)||7.0,bondR:parseFloat(document.getElementById('bond').value)||4.67,blendStart:parseFloat(document.getElementById('blend-start').value)||70,blendEnd:parseFloat(document.getElementById('blend-end').value)||50,below:parseFloat(document.getElementById('below').value)||2.0,above:parseFloat(document.getElementById('above').value)||2.0};
 }
 
 // ── Simulation helpers ────────────────────────────────────────────────────────
 function getBlended(age,cfg,offset=0){const t=Math.min(1,Math.max(0,(age-cfg.cur)/Math.max(1,cfg.endAge-cfg.cur)));const sp=(cfg.blendStart+(cfg.blendEnd-cfg.blendStart)*t)/100;return(sp*cfg.stockR+(1-sp)*cfg.bondR-offset)/100;}
-// Cash/MM grows at inflation rate (approx cash yield), not stock/bond blend
-function getAccountRate(acctType,age,cfg,offset=0){
-  if(acctType==='Cash/MM') return cfg.infl/100; // cash earns ~inflation (money market)
+function getAccountRate(acct,age,cfg,offset=0){
+  // Per-account custom return rate takes priority (still offset by market scenario)
+  if(acct.customReturn!==null&&acct.customReturn!==undefined){
+    return(acct.customReturn-offset)/100;
+  }
+  // Cash/MM grows at inflation rate regardless
+  if(acct.type==='Cash/MM') return cfg.infl/100;
   return getBlended(age,cfg,offset);
 }
 function getFiling(age,periods){let p=periods[0];for(const fp of periods)if(age>=fp.fromAge)p=fp;return p;}
@@ -992,10 +1111,10 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   const rm=returnMultiplier!==undefined?returnMultiplier:1.0;
   if(!isRet){
     cfg.contribs.forEach(c=>{if(age<c.stopAt){const idx=accts.findIndex(a=>a.name===c.account);if(idx>=0)accts[idx].balance+=c.annual+c.match;}});
-    accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
+    accts.forEach(a=>{const rate=getAccountRate(a,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
     return{accts,tax:0,ssIncome:0,otherIncome:[],rmd:0,roth:null,netWithdrawal:0,totalIncome:0,wdState};
   }
-  accts.forEach(a=>{const rate=getAccountRate(a.type,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
+  accts.forEach(a=>{const rate=getAccountRate(a,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
   const ssIncome=getSS(age,cfg.ss,cfg.cur);
   const otherIncome=getOtherIncome(age,cfg.incomeStreams,cfg.cur);
   const totalIncome=ssIncome+otherIncome.reduce((s,i)=>s+i.amount,0);
@@ -1065,6 +1184,18 @@ function simulate(cfg,scenario,offset=0,crashes=[]){
   for(let age=cfg.cur;age<=cfg.endAge;age++){
     const yr=baseYear+(age-cfg.cur);
     const wdAmt=getWdTarget(age,scenario,cfg.ret,cfg.infl);
+
+    // Apply one-time events at start of year (before growth and withdrawals)
+    const baseYear2=baseYear; // already defined above
+    (cfg.oneTimeEvents||[]).forEach(ev=>{
+      if(ev.year===yr){
+        const idx=state.findIndex(a=>a.name.trim().toLowerCase()===ev.account.trim().toLowerCase());
+        if(idx>=0){
+          if(ev.type==='deposit') state[idx].balance+=ev.amount;
+          else state[idx].balance=Math.max(0,state[idx].balance-ev.amount);
+        }
+      }
+    });
 
     // Check for crash this year
     let crashDrop=0;
@@ -1225,13 +1356,14 @@ function buildBalanceTable(rows,cfg,view){
 }
 
 function buildDetailTable(rows,cfg,view){
-  const hasSSI=!!cfg.ss,hasOther=cfg.incomeStreams.length>0,hasRoth=cfg.rothPeriods.length>0,isPre=cfg.cur<cfg.ret;
+  const hasSSI=!!cfg.ss,hasOther=cfg.incomeStreams.length>0,hasRoth=cfg.rothPeriods.length>0,isPre=cfg.cur<cfg.ret,hasEvents=(cfg.oneTimeEvents||[]).length>0;
   let th='<tr><th>Year</th><th>Age</th><th>Phase</th>';
   cfg.accounts.forEach(a=>th+=`<th>${a.name}</th>`);
   th+='<th>Total</th>';
   if(isPre)th+='<th>Contributions</th>';
-  if(hasSSI)th+=`<th>${cfg.ss.name}</th>`;
+  if(hasSSI)th+=`<th style="min-width:60px;max-width:80px;">${cfg.ss.name}</th>`;
   if(hasOther)cfg.incomeStreams.forEach(s=>th+=`<th>${s.name}</th>`);
+  if(hasEvents)th+='<th>One-time event</th>';
   th+='<th>Spend target</th><th>From portfolio</th><th>RMD</th>';
   if(hasRoth)th+='<th>Roth Conv</th><th>Bracket</th><th>Conv Tax</th>';
   th+='<th>Est. Tax</th></tr>';
@@ -1246,6 +1378,13 @@ function buildDetailTable(rows,cfg,view){
     if(isPre)tb+=`<td class="${!r.isRet?'pos':'zer'}">${!r.isRet?fmt(cfg.contribs.reduce((s,c)=>s+c.annual+c.match,0)):'—'}</td>`;
     if(hasSSI)tb+=`<td>${r.ssIncome>0?fmt(r.ssIncome):'—'}</td>`;
     if(hasOther)cfg.incomeStreams.forEach(s=>{const inc=r.otherIncome.find(o=>o.name===s.name);tb+=`<td>${inc?fmt(inc.amount):'—'}</td>`;});
+    if(hasEvents){
+      const evs=(cfg.oneTimeEvents||[]).filter(ev=>ev.year===r.year);
+      if(evs.length){
+        const parts=evs.map(ev=>`<span style="color:${ev.type==='deposit'?'var(--green)':'var(--red)'}">${ev.type==='deposit'?'+':'-'}${fmt(ev.amount)} ${ev.description?'('+ev.description+')':''}</span>`);
+        tb+=`<td>${parts.join('<br>')}</td>`;
+      } else tb+='<td class="zer">—</td>';
+    };
     tb+=`<td>${r.isRet?fmt(r.wdTarget):'—'}</td>`;
     tb+=`<td>${r.netWithdrawal>0?fmt(r.netWithdrawal):'—'}</td><td>${r.rmd>0?fmt(r.rmd):'—'}</td>`;
     if(hasRoth){tb+=`<td>${r.roth?fmt(r.roth.amount):'—'}</td><td>${r.roth?r.roth.bracket+'%':'—'}</td><td class="${r.roth?'neg':'zer'}">${r.roth?fmt(r.roth.taxCost):'—'}</td>`;}
@@ -1541,7 +1680,7 @@ function applySettings(s){
     document.getElementById('accts').innerHTML='';
     s.accounts.forEach(a=>{
       const d=document.createElement('div');d.className='ri acct';
-      d.innerHTML=`<input type="text" value="${esc(a.name)}"><input type="number" value="${a.balance}"><select>${['Tax-deferred','Tax-free (Roth)','Taxable LTCG','Cash/MM'].map(t=>`<option${t===a.type?' selected':''}>${t}</option>`).join('')}</select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+      d.innerHTML=`<input type="text" value="${esc(a.name)}"><input type="number" value="${a.balance}"><select>${['Tax-deferred','Tax-free (Roth)','Taxable LTCG','Cash/MM'].map(t=>`<option${t===a.type?' selected':''}>${t}</option>`).join('')}</select><input type="number" placeholder="e.g. 7.0" step="0.1" value="${a.customReturn!==null&&a.customReturn!==undefined?a.customReturn:''}" title="Override return % (blank = global)"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
       document.getElementById('accts').appendChild(d);
     });
   }
@@ -1588,10 +1727,9 @@ function applySettings(s){
   document.getElementById('income-streams').innerHTML='';
   if(s.incomeStreams?.length){
     s.incomeStreams.forEach(inc=>{
-      const typeOpts=['Pension','Annuity','Rental income','Part-time work','Spousal SS','Other'].map(t=>`<option${t===inc.type?' selected':''}>${t}</option>`).join('');
       const taxOpts=['100% taxable (ordinary income)','85% taxable (SS standard)','Tax-free','LTCG rates'].map(t=>`<option${t===inc.taxability?' selected':''}>${t}</option>`).join('');
       const d=document.createElement('div');d.className='income-card';
-      d.innerHTML=`<div class="income-hdr"><div style="display:flex;align-items:center;gap:8px;"><select style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);width:auto;">${typeOpts}</select><input type="text" value="${esc(inc.name)}" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:150px;color:var(--text);"></div><button class="rmbtn" onclick="this.closest('.income-card').remove()">×</button></div><div class="g4"><div><label class="fl">Start age</label><input type="number" value="${inc.startAge||''}"></div><div><label class="fl">End age</label><input type="number" value="${inc.endAge||''}"></div><div><label class="fl">Annual $ (today's $)</label><input type="number" value="${inc.annualAmt||''}"></div><div><label class="fl">COLA %</label><input type="number" value="${inc.cola||''}" step="0.1"></div></div><div class="g2" style="margin-top:9px;"><div><label class="fl">Taxability</label><select>${taxOpts}</select></div><div><label class="fl">Notes</label><input type="text" value=""></div></div>`;
+      d.innerHTML=`<div class="income-hdr"><div style="display:flex;align-items:center;gap:8px;flex:1;"><span class="income-tag" style="flex-shrink:0;">Income stream</span><input type="text" class="inc-name" value="${esc(inc.name)}" style="font-size:13px;font-weight:500;flex:1;"></div><button class="rmbtn" onclick="this.closest('.income-card').remove()">×</button></div><div class="g4" style="margin-top:9px;"><div><label class="fl">Start age</label><input type="number" class="inc-start" value="${inc.startAge||''}"></div><div><label class="fl">End age</label><input type="number" class="inc-end" value="${inc.endAge||''}"></div><div><label class="fl">Annual $ (today's $)</label><input type="number" class="inc-amt" value="${inc.annualAmt||''}"></div><div><label class="fl">COLA %</label><input type="number" class="inc-cola" value="${inc.cola||''}" step="0.1"></div></div><div style="margin-top:9px;"><label class="fl">Taxability</label><select class="inc-tax" style="max-width:300px;">${taxOpts}</select></div>`;
       document.getElementById('income-streams').appendChild(d);
     });
   }
@@ -1633,28 +1771,61 @@ function applySettings(s){
   } else {
     document.getElementById('wd-note').style.display='';
   }
-  // Withdrawal scenarios
-  if(s.baseScenario){
-    document.getElementById('base-amt').value=s.baseScenario.amount||'';
-    document.getElementById('base-lbl').value=s.baseScenario.label||'Base plan';
-    document.getElementById('base-dur').value=s.baseScenario.type||'all';
-    document.getElementById('base-stepdown').style.display=s.baseScenario.type==='c'?'block':'none';
-    if(s.baseScenario.type==='c'){
-      document.getElementById('base-a1').value=s.baseScenario.a1||'';
-      document.getElementById('base-y1').value=s.baseScenario.y1||'';
-      document.getElementById('base-a2').value=s.baseScenario.a2||'';
-    }
+  // Withdrawal scenarios — restore base plan steps
+  const baseStepsEl=document.getElementById('base-steps');
+  baseStepsEl.innerHTML='';
+  document.getElementById('base-lbl').value=s.baseScenario?.label||'Base plan';
+  refreshScenarioDropdown();
+  const baseStepsToLoad=s.baseScenario?.steps||[];
+  if(baseStepsToLoad.length){
+    baseStepsToLoad.forEach((step,i)=>{
+      const isLast=i===baseStepsToLoad.length-1;
+      addSpendStep(baseStepsEl,step.amount,isLast?null:step.years,isLast);
+    });
+  } else {
+    // Legacy import — single amount
+    addSpendStep(baseStepsEl,s.baseScenario?.amount||null,null,true);
   }
+  // Extra scenarios
   document.getElementById('extra-scenarios').innerHTML='';
   scCount=0;
   if(s.extraScenarios?.length){
     s.extraScenarios.forEach(sc=>{
       scCount++;
+      const stepsId='sc-steps-'+scCount;
       const d=document.createElement('div');d.className='scenario-card';
-      d.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;"><input type="text" class="sc-label" value="${esc(sc.label)}" style="border:none;background:transparent;padding:0;font-size:13px;font-weight:500;color:var(--text);flex:1;"><button class="rmbtn" onclick="this.closest('.scenario-card').remove()">×</button></div><div class="g3"><div><label class="fl">Annual spend target ($)</label><input type="number" class="sc-amt" value="${sc.amount||''}"></div><div><label class="fl">Duration</label><select class="sc-dur" onchange="this.closest('.scenario-card').querySelector('.sc-stepdown').style.display=this.value==='c'?'block':'none'"><option value="all"${sc.type!=='c'?' selected':''}>All years</option><option value="c"${sc.type==='c'?' selected':''}>Custom step-down</option></select></div><div><label class="fl">Notes</label><input type="text" placeholder="e.g. higher early spend"></div></div><div class="sc-stepdown" style="display:${sc.type==='c'?'block':'none'};margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><div class="g2" style="margin-bottom:7px;"><div><label class="fl">First period amount ($)</label><input type="number" class="sc-a1" value="${sc.a1||''}"></div><div><label class="fl">For how many years</label><input type="number" class="sc-y1" value="${sc.y1||''}"></div></div><div class="g2"><div><label class="fl">Then amount ($/yr)</label><input type="number" class="sc-a2" value="${sc.a2||''}"></div><div><label class="fl">Remaining years</label><input type="text" value="All remaining" disabled style="opacity:.5;"></div></div></div>`;
+      d.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+        <span class="badge badge-opt">Comparison scenario</span>
+        <button class="rmbtn" onclick="this.closest('.scenario-card').remove();refreshScenarioDropdown()">×</button>
+      </div>
+      <div class="fg" style="margin-bottom:11px;">
+        <label class="fl" style="color:var(--accent);">Plan name <span style="color:var(--muted);font-style:italic;text-transform:none;letter-spacing:0;font-weight:400;">(shows in Projections &amp; Compare dropdowns)</span></label>
+        <input type="text" class="sc-label" value="${esc(sc.label)}" oninput="refreshScenarioDropdown()" style="font-size:14px;font-weight:500;">
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Annual spend in today's dollars. Add steps to model spending changes over time.</p>
+      <div class="spend-step-hdrs" style="display:grid;grid-template-columns:1fr 140px 24px;gap:7px;margin-bottom:5px;">
+        <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Annual spend ($)</span>
+        <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Duration</span>
+        <span></span>
+      </div>
+      <div id="${stepsId}"></div>
+      <button class="btn-link" onclick="addSpendStep('${stepsId}')" style="margin-top:4px;">+ Add another spend period</button>`;
       document.getElementById('extra-scenarios').appendChild(d);
+      // Restore steps
+      const stepsEl=document.getElementById(stepsId);
+      const scSteps=sc.steps||[];
+      if(scSteps.length){
+        scSteps.forEach((step,i)=>{
+          const isLast=i===scSteps.length-1;
+          addSpendStep(stepsEl,step.amount,isLast?null:step.years,isLast);
+        });
+      } else {
+        addSpendStep(stepsEl,sc.amount||null,null,true);
+      }
     });
   }
+  refreshScenarioDropdown();
 }
 
 function esc(str){return(str||'').replace(/"/g,'\u0026quot;').replace(/</g,'\u0026lt;').replace(/>/g,'\u0026gt;');}
