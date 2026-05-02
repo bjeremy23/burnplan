@@ -378,7 +378,7 @@ td.dep{color:var(--red)}
     Import settings
     <input type="file" accept=".json" onchange="importSettings(event)" style="display:none;">
   </label>
-  <button class="btn" onclick="if(confirm('Reset all inputs to defaults?')){window.location.href=window.location.href.split('?')[0]+'?t='+Date.now();}">Reset all</button>
+  <button class="btn" onclick="resetAll()">Reset all</button>
   <span style="font-size:11px;color:var(--muted);font-style:italic;">Export/Import saves your entire plan — both tabs — in one file.</span>
 </div>
 </div>
@@ -518,7 +518,10 @@ td.dep{color:var(--red)}
 
   <!-- Stress test comparison -->
   <div style="margin-top:8px;">
-    <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Stress test comparison</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:14px;font-weight:600;">Stress test comparison</div>
+      <button class="btn btn-sm" onclick="clearStressCompare()">Clear comparison</button>
+    </div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Select two or more saved stress tests from the Saved tab to overlay them on one chart.</p>
     <div id="stress-compare-list" style="margin-bottom:14px;"></div>
     <div class="chart-wrap" id="stress-compare-chart-wrap" style="display:none;">
@@ -1669,8 +1672,30 @@ function renderSaved(){
   // Update the stress compare section
   updateStressCompareList();
 }
-function deleteSaved(i){const saves=getSaved();saves.splice(i,1);localStorage.setItem('rp_saves',JSON.stringify(saves));renderSaved();}
-function clearAllSaved(){if(confirm('Clear all saved results?')){localStorage.removeItem('rp_saves');renderSaved();}}
+function clearStressCompare(){
+  destroyChart('stress-compare-chart');
+  document.getElementById('stress-compare-chart-wrap').style.display='none';
+  document.getElementById('stress-compare-metrics').style.display='none';
+  // Uncheck all checkboxes
+  document.querySelectorAll('.stress-compare-chk').forEach(c=>c.checked=false);
+}
+
+function deleteSaved(i){
+  const saves=getSaved();
+  saves.splice(i,1);
+  localStorage.setItem('rp_saves',JSON.stringify(saves));
+  renderSaved();
+  // Refresh compare list and clear chart since data may be stale
+  updateStressCompareList();
+  clearStressCompare();
+}
+function clearAllSaved(){
+  if(!confirm('Clear all saved results?'))return;
+  localStorage.removeItem('rp_saves');
+  renderSaved();
+  updateStressCompareList();
+  clearStressCompare();
+}
 
 function updateStressCompareList(){
   const saves=getSaved();
@@ -2071,6 +2096,23 @@ function esc(str){return(str||'').replace(/"/g,'\u0026quot;').replace(/</g,'\u00
 
 updateMode();
 renderSaved();
+
+function resetAll(){
+  // Browser blocks confirm() on file:// — use inline confirmation instead
+  const existing=document.getElementById('reset-confirm-bar');
+  if(existing){existing.remove();return;}
+  const bar=document.createElement('div');
+  bar.id='reset-confirm-bar';
+  bar.style.cssText='position:fixed;bottom:50px;left:50%;transform:translateX(-50%);background:#1a1d27;border:1px solid #ef4444;border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:14px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+  bar.innerHTML=`
+    <span style="font-size:13px;color:#e8eaf0;">Reset all inputs to defaults? This cannot be undone.</span>
+    <button onclick="window.location.replace(window.location.href.split('?')[0]+'?reset='+Date.now())" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:500;">Yes, reset</button>
+    <button onclick="document.getElementById('reset-confirm-bar').remove()" style="background:#2e3347;color:#e8eaf0;border:1px solid #3a4055;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;">Cancel</button>
+  `;
+  document.body.appendChild(bar);
+  // Auto-dismiss after 8 seconds
+  setTimeout(()=>{const b=document.getElementById('reset-confirm-bar');if(b)b.remove();},8000);
+}
 // Initialize default stress test crash row
 const defaultCrashContainer=document.getElementById('default-crash-events');
 if(defaultCrashContainer) defaultCrashContainer.appendChild(makeCrashRow(2028,38,4,'Market crash'));
