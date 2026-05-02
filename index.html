@@ -500,6 +500,7 @@ td.dep{color:var(--red)}
 <div class="tab-content" id="tab-compare">
   <div id="compare-empty" class="empty-state" style="display:none;">Run projections from the Setup tab first, then add comparison scenarios to see them here.</div>
   <div id="compare-results" style="display:none;">
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Withdrawal scenario comparison</div>
     <div class="proj-ctrls" style="margin-bottom:14px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <label style="font-size:12px;color:var(--muted);">Market view:</label>
@@ -512,7 +513,19 @@ td.dep{color:var(--red)}
       <button class="btn btn-sm" onclick="exportPNG('compare-chart')">Chart PNG</button>
     </div>
     <div class="chart-wrap"><div class="chart-title" id="compare-chart-title">Total portfolio — scenario comparison · avg market</div><div class="chart-canvas-wrap" style="height:320px;"><canvas id="compare-chart"></canvas></div></div>
-    <div id="compare-metrics" class="metrics-row" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));"></div>
+    <div id="compare-metrics" class="metrics-row" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:28px;"></div>
+  </div>
+
+  <!-- Stress test comparison -->
+  <div style="margin-top:8px;">
+    <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Stress test comparison</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Select two or more saved stress tests from the Saved tab to overlay them on one chart.</p>
+    <div id="stress-compare-list" style="margin-bottom:14px;"></div>
+    <div class="chart-wrap" id="stress-compare-chart-wrap" style="display:none;">
+      <div class="chart-title">Stressed portfolios — comparison <span style="display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportPNG('stress-compare-chart')">PNG</button></span></div>
+      <div class="chart-canvas-wrap" style="height:320px;"><canvas id="stress-compare-chart"></canvas></div>
+    </div>
+    <div id="stress-compare-metrics" style="display:none;" class="metrics-row" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));"></div>
   </div>
 </div>
 
@@ -520,15 +533,23 @@ td.dep{color:var(--red)}
 <div class="tab-content" id="tab-stress">
   <div class="stress-run-card">
     <div style="font-size:13px;font-weight:500;margin-bottom:11px;">Define &amp; run stress tests</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:13px;">Each test can have multiple crash events. Run against any market scenario — below avg, average, or above avg — to see how a crash plays out under different conditions.</p>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:13px;">
-      <label style="font-size:12px;color:var(--muted);">Market scenario:</label>
-      <select id="stress-mkt-view" style="width:auto;">
-        <option value="base">Average market</option>
-        <option value="below">Below average market</option>
-        <option value="above">Above average market</option>
-        <option value="all3">All three — compare</option>
-      </select>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:13px;">Each test can have multiple crash events. Run against any combination of withdrawal scenario and market conditions.</p>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:13px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:var(--muted);">Withdrawal scenario:</label>
+        <select id="stress-sc-view" style="width:auto;">
+          <option value="base">Base plan</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:var(--muted);">Market scenario:</label>
+        <select id="stress-mkt-view" style="width:auto;">
+          <option value="base">Average market</option>
+          <option value="below">Below average market</option>
+          <option value="above">Above average market</option>
+          <option value="all3">All three — compare</option>
+        </select>
+      </div>
     </div>
     <div id="stress-test-defs">
       <div class="stress-card">
@@ -594,7 +615,7 @@ function goTab(id){
   document.querySelectorAll('.tab-btn').forEach(b=>{if(b.getAttribute('onclick')?.includes("'"+id+"'"))b.classList.add('active');});
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   if(id==='proj'&&simData)renderProjections();
-  if(id==='compare'&&simData)renderCompare();
+  if(id==='compare'){if(simData)renderCompare();updateStressCompareList();}
   if(id==='saved')renderSaved();
 }
 
@@ -1316,9 +1337,7 @@ function runProjections(){
       above:simulate(cfg,sc,-cfg.above)
     }))
   };
-  const sel=document.getElementById('proj-sc-sel');
-  sel.innerHTML=`<option value="base">${cfg.baseScenario.label}</option>`;
-  simData.extras.forEach((e,i)=>sel.innerHTML+=`<option value="${i}">${e.label}</option>`);
+  refreshScenarioDropdown();
   goTab('proj');
 }
 
@@ -1463,14 +1482,24 @@ function buildDetailTable(rows,cfg,view){
 }
 
 function refreshScenarioDropdown(){
-  if(!simData)return;
+  const baseName=document.getElementById('base-lbl').value||'Base plan';
+  const extras=[...document.querySelectorAll('#extra-scenarios .sc-label')].map((inp,i)=>inp.value||'Scenario '+(i+2));
+  // Update projections dropdown
   const sel=document.getElementById('proj-sc-sel');
-  const curVal=sel.value;
-  sel.innerHTML=`<option value="base">${document.getElementById('base-lbl').value||'Base plan'}</option>`;
-  [...document.querySelectorAll('#extra-scenarios .sc-label')].forEach((inp,i)=>{
-    sel.innerHTML+=`<option value="${i}">${inp.value||'Scenario '+(i+2)}</option>`;
-  });
-  sel.value=curVal; // restore selection
+  if(sel){
+    const curVal=sel.value;
+    sel.innerHTML=`<option value="base">${baseName}</option>`;
+    extras.forEach((lbl,i)=>sel.innerHTML+=`<option value="${i}">${lbl}</option>`);
+    sel.value=curVal;
+  }
+  // Update stress test scenario dropdown
+  const stressSel=document.getElementById('stress-sc-view');
+  if(stressSel){
+    const curStressVal=stressSel.value;
+    stressSel.innerHTML=`<option value="base">${baseName}</option>`;
+    extras.forEach((lbl,i)=>stressSel.innerHTML+=`<option value="${i}">${lbl}</option>`);
+    if([...stressSel.options].some(o=>o.value===curStressVal))stressSel.value=curStressVal;
+  }
 }
 
 function renderCompare(){
@@ -1520,18 +1549,21 @@ function runStressTest(btn){
   if(crashes.length===0){alert('Add at least one crash event with a year and drop %.');return;}
   const cfg=simData.cfg;
   const mktView=document.getElementById('stress-mkt-view').value;
+  const scSel=document.getElementById('stress-sc-view')?.value||'base';
+  const scenario=(!scSel||scSel==='base')?cfg.baseScenario:cfg.extraScenarios[parseInt(scSel)]||cfg.baseScenario;
+  const scLabel=scenario.label||'Base plan';
   const offsets={base:0,below:cfg.below,above:-cfg.above};
   const scenarios=mktView==='all3'
     ?[{key:'above',label:'Above avg',color:'#22c55e'},{key:'base',label:'Average',color:'#4f9cf9'},{key:'below',label:'Below avg',color:'#ef4444'}]
     :[{key:mktView,label:mktView==='below'?'Below avg':mktView==='above'?'Above avg':'Average',color:mktView==='below'?'#ef4444':mktView==='above'?'#22c55e':'#4f9cf9'}];
   stressData={testName,crashes,mktView,scenarios:scenarios.map(s=>({
     ...s,
-    base:simulate(cfg,cfg.baseScenario,offsets[s.key],[]),
-    stressed:simulate(cfg,cfg.baseScenario,offsets[s.key],crashes)
+    base:simulate(cfg,scenario,offsets[s.key],[]),
+    stressed:simulate(cfg,scenario,offsets[s.key],crashes)
   }))};
   const firstBase=stressData.scenarios[0].base;
   const labels=firstBase.map(r=>String(r.age));
-  document.getElementById('stress-title').textContent='— '+testName+' · '+(mktView==='all3'?'all market scenarios':scenarios[0].label+' market');
+  document.getElementById('stress-title').textContent=`— ${testName} · ${scLabel} · ${mktView==='all3'?'all market scenarios':scenarios[0].label+' market'}`;
   document.getElementById('stress-chart-wrap').style.display='block';
   document.getElementById('stress-result-card').style.display='block';
   const datasets=[];
@@ -1578,14 +1610,31 @@ function saveStressResult(){
   if(!stressData)return;
   try{
     const saves=getSaved();
+    const scSel=document.getElementById('stress-sc-view')?.value||'base';
+    const scName=(!scSel||scSel==='base')
+      ?(document.getElementById('base-lbl')?.value||'Base plan')
+      :(document.querySelectorAll('#extra-scenarios .sc-label')[parseInt(scSel)]?.value||'Scenario');
+    const mktLabel={base:'Avg market',below:'Below avg market',above:'Above avg market',all3:'All market scenarios'}[stressData.mktView]||stressData.mktView;
     const summary=stressData.scenarios.map(s=>({
       market:s.label,
       endingBase:Math.round(s.base[s.base.length-1].total),
       endingStressed:Math.round(s.stressed[s.stressed.length-1].total),
       ruinBase:s.base.find(r=>r.total<=0)?.age||null,
-      ruinStressed:s.stressed.find(r=>r.total<=0)?.age||null
+      ruinStressed:s.stressed.find(r=>r.total<=0)?.age||null,
+      // Store year-by-year totals for compare chart
+      baseData:s.base.map(r=>({age:r.age,total:Math.round(r.total)})),
+      stressedData:s.stressed.map(r=>({age:r.age,total:Math.round(r.total)}))
     }));
-    saves.push({type:'stress',name:stressData.testName,date:new Date().toLocaleDateString(),crashes:stressData.crashes,mktView:stressData.mktView,scenarios:summary});
+    saves.push({
+      type:'stress',
+      name:stressData.testName,
+      withdrawalScenario:scName,
+      marketView:mktLabel,
+      mktView:stressData.mktView,
+      date:new Date().toLocaleDateString(),
+      crashes:stressData.crashes,
+      scenarios:summary
+    });
     localStorage.setItem('rp_saves',JSON.stringify(saves));
     alert('Saved!');
   }catch(e){alert('Could not save: '+e.message);}
@@ -1596,17 +1645,93 @@ function renderSaved(){
   if(!saves.length){list.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   list.innerHTML=saves.map((s,i)=>{
+    const tag=s.withdrawalScenario?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(79,156,249,.15);color:var(--accent);border:1px solid rgba(79,156,249,.3);margin-right:5px;">${s.withdrawalScenario}</span>`:'';
+    const mktTag=s.marketView?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.3);margin-right:5px;">${s.marketView}</span>`:'';
     let detail='';
     if(s.scenarios){
-      detail=s.scenarios.map(sc=>`${sc.market}: no crash ${fmt(sc.endingBase)} → stressed ${fmt(sc.endingStressed)}${sc.ruinStressed?' (ruin age '+sc.ruinStressed+')':''}`).join(' | ');
+      detail=s.scenarios.map(sc=>`${sc.market}: no crash ${fmt(sc.endingBase)} → stressed ${fmt(sc.endingStressed)}${sc.ruinStressed?' · ruin age '+sc.ruinStressed:''}`).join(' | ');
     } else {
       detail=`Base: ${fmt(s.endingBase)} → Stressed: ${fmt(s.endingStressed)}`;
     }
-    return`<div class="saved-item"><div><div style="font-size:13px;font-weight:500;">${s.name}</div><div style="font-size:11px;color:var(--muted);">Stress test · ${s.date} · ${detail}</div></div><button class="btn btn-sm btn-danger" onclick="deleteSaved(${i})">Delete</button></div>`;
+    return`<div class="saved-item" style="align-items:flex-start;flex-direction:column;gap:7px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <input type="checkbox" class="stress-compare-chk" data-idx="${i}" style="width:auto;cursor:pointer;" title="Add to compare">
+          <span style="font-size:13px;font-weight:500;">${s.name}</span>
+          ${tag}${mktTag}
+          <span style="font-size:11px;color:var(--muted);">${s.date}</span>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="deleteSaved(${i})">Delete</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);padding-left:22px;">${detail}</div>
+    </div>`;
   }).join('');
+  // Update the stress compare section
+  updateStressCompareList();
 }
 function deleteSaved(i){const saves=getSaved();saves.splice(i,1);localStorage.setItem('rp_saves',JSON.stringify(saves));renderSaved();}
 function clearAllSaved(){if(confirm('Clear all saved results?')){localStorage.removeItem('rp_saves');renderSaved();}}
+
+function updateStressCompareList(){
+  const saves=getSaved();
+  const el=document.getElementById('stress-compare-list');
+  if(!el)return;
+  if(!saves.length){el.innerHTML='<p style="font-size:12px;color:var(--muted);">No saved stress tests yet. Run and save stress tests first.</p>';return;}
+  el.innerHTML=saves.map((s,i)=>{
+    const tag=s.withdrawalScenario?`<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(79,156,249,.15);color:var(--accent);border:1px solid rgba(79,156,249,.3);">${s.withdrawalScenario}</span> `:'';
+    const mktTag=s.marketView?`<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.3);">${s.marketView}</span>`:'';
+    return`<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;">
+      <input type="checkbox" class="stress-compare-chk" data-idx="${i}" onchange="renderStressCompare()" style="width:auto;cursor:pointer;">
+      <span style="font-size:13px;">${s.name}</span> ${tag}${mktTag}
+      <span style="font-size:11px;color:var(--muted);">${s.date}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderStressCompare(){
+  const saves=getSaved();
+  const checked=[...document.querySelectorAll('#stress-compare-list .stress-compare-chk:checked')].map(c=>parseInt(c.dataset.idx));
+  const chartWrap=document.getElementById('stress-compare-chart-wrap');
+  const metricsEl=document.getElementById('stress-compare-metrics');
+  if(checked.length<1){chartWrap.style.display='none';metricsEl.style.display='none';return;}
+  const selected=checked.map(i=>saves[i]).filter(Boolean);
+  // Build datasets — for each saved test show stressed line(s)
+  const datasets=[];
+  let labels=null;
+  selected.forEach((s,si)=>{
+    const color=COLORS[si%COLORS.length];
+    s.scenarios?.forEach(sc=>{
+      if(!labels&&sc.stressedData)labels=sc.stressedData.map(r=>String(r.age));
+      if(sc.stressedData){
+        const suffix=s.scenarios.length>1?' ('+sc.market+')':'';
+        datasets.push({label:s.name+suffix,data:sc.stressedData.map(r=>r.total),borderColor:color,borderWidth:2,pointRadius:0,fill:false,tension:.3});
+      }
+      if(sc.baseData){
+        datasets.push({label:s.name+' (no crash)',data:sc.baseData.map(r=>r.total),borderColor:color,borderWidth:1,borderDash:[4,3],pointRadius:0,fill:false,tension:.3});
+      }
+    });
+  });
+  if(!labels||!datasets.length){chartWrap.style.display='none';metricsEl.style.display='none';return;}
+  chartWrap.style.display='block';
+  metricsEl.style.display='grid';
+  metricsEl.style.gridTemplateColumns='repeat(auto-fill,minmax(180px,1fr))';
+  destroyChart('stress-compare-chart');
+  charts['stress-compare-chart']=new Chart(document.getElementById('stress-compare-chart'),{type:'line',data:{labels,datasets},options:chartOpts()});
+  metricsEl.innerHTML=selected.map((s,si)=>{
+    const color=COLORS[si%COLORS.length];
+    return s.scenarios?.map(sc=>{
+      const diff=sc.endingStressed-sc.endingBase;
+      const suffix=s.scenarios.length>1?' · '+sc.market:'';
+      return`<div class="metric-card">
+        <div class="metric-lbl" style="color:${color}">${s.name}${suffix}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${s.withdrawalScenario||''} ${s.marketView?'· '+s.marketView:''}</div>
+        <div class="metric-val ${sc.endingStressed>0?'a':'r'}">${fmt(sc.endingStressed)}</div>
+        <div style="font-size:11px;color:${diff>=0?'var(--green)':'var(--red)'};margin-top:3px;">Impact: ${diff>=0?'+':''}${fmt(diff)}</div>
+        <div style="font-size:11px;color:var(--muted);">Ruin: ${sc.ruinStressed?'Age '+sc.ruinStressed:'Never'}</div>
+      </div>`;
+    }).join('')||'';
+  }).join('');
+}
 
 function exportCSV(){
   if(!simData)return;
