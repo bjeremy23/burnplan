@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RetirePlan — Free Retirement Calculator & Planner</title>
+<title>BurnPlan — Retirement Planning for the FIRE Community</title>
 <meta name="description" content="Free retirement planning calculator. Project account balances, model Social Security, stress test market crashes, and compare withdrawal scenarios across below, average, and above market conditions.">
-<meta name="keywords" content="retirement calculator, retirement planner, 401k calculator, Social Security calculator, portfolio withdrawal, retirement income planning">
-<meta property="og:title" content="RetirePlan — Free Retirement Calculator">
+<meta name="keywords" content="retirement calculator, BurnPlan, 401k calculator, Social Security calculator, portfolio withdrawal, retirement income planning">
+<meta property="og:title" content="BurnPlan — Free Retirement Calculator">
 <meta property="og:description" content="Project your retirement portfolio, model SS income, stress test market crashes, and compare withdrawal strategies. Free and private — runs entirely in your browser.">
 <meta property="og:type" content="website">
-<link rel="canonical" href="https://bjeremy23.github.io/retireplan/">
+<link rel="canonical" href="https://bjeremy23.github.io/burnplan/">
 
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WKRG0LSFG3"></script>
@@ -178,12 +178,12 @@ td.dep{color:var(--red)}
 <!-- Disclaimer bar -->
 <div class="disclaimer-bar">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-  <span><strong>For educational purposes only.</strong> RetirePlan is not financial advice. Projections are estimates based on assumptions you provide and do not guarantee future results. <a href="privacy.html" target="_blank">Privacy policy</a> · <a href="privacy.html#disclaimer" target="_blank">Full disclaimer</a></span>
+  <span><strong>For educational purposes only.</strong> BurnPlan is not financial advice. Projections are estimates based on assumptions you provide and do not guarantee future results. <a href="privacy.html" target="_blank">Privacy policy</a> · <a href="privacy.html#disclaimer" target="_blank">Full disclaimer</a></span>
 </div>
 
 <div class="app">
 <div class="sidebar">
-  <div class="sidebar-logo"><div class="lt">RetirePlan</div><div class="ls">Personal financial planner</div></div>
+  <div class="sidebar-logo"><div class="lt">BurnPlan</div><div class="ls">FIRE &amp; retirement planner</div></div>
   <div class="nav-section">Plan setup</div>
   <div class="nav-item active" onclick="goTab('setup')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Financial setup</div>
   <div class="nav-item" onclick="goTab('withdrawal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Withdrawal plan</div>
@@ -1853,7 +1853,7 @@ function exportSettings(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download='retireplan_settings_'+new Date().toISOString().slice(0,10)+'.json';
+  a.download='burnplan_settings_'+new Date().toISOString().slice(0,10)+'.json';
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},500);
@@ -1866,7 +1866,7 @@ function importSettings(event){
   reader.onload=e=>{
     try{
       const s=JSON.parse(e.target.result);
-      if(!s.version)throw new Error('Not a valid RetirePlan settings file');
+      if(!s.version)throw new Error('Not a valid BurnPlan settings file');
       applySettings(s);
       alert('Settings loaded successfully.');
     }catch(err){
@@ -2122,7 +2122,7 @@ addSpendStep(document.getElementById('base-steps'));
 
 <!-- Footer -->
 <div class="footer-bar" style="position:sticky;bottom:0;z-index:10;">
-  <span>© 2025 RetirePlan &nbsp;·&nbsp; Free retirement planning tool &nbsp;·&nbsp; All calculations run locally in your browser — no data is sent to any server.</span>
+  <span>© 2025 BurnPlan &nbsp;·&nbsp; Free FIRE retirement planning tool &nbsp;·&nbsp; All calculations run locally in your browser — no data is sent to any server.</span>
   <span style="display:flex;gap:16px;">
     <a href="privacy.html" target="_blank">Privacy Policy</a>
     <a href="privacy.html#disclaimer" target="_blank">Disclaimer</a>
