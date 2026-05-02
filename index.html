@@ -241,7 +241,7 @@ td.dep{color:var(--red)}
   <div class="panel-body">
     <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">If no withdrawal schedule is set, accounts are drawn in entry order until depleted.</p>
     <p style="font-size:12px;color:var(--muted);margin-bottom:9px;"><strong style="color:var(--text);">Return %</strong> — optionally override the global market assumption for a specific account. Leave blank to use the global blended stock/bond rate from Market assumptions. Useful if one account is bonds-only, one is all-stock, or you have a fixed-rate instrument.</p>
-    <div class="colhdr acct" style="display:grid;grid-template-columns:1fr 110px 130px 90px 24px;gap:7px;"><span>Account name</span><span>Balance ($)</span><span>Tax treatment</span><span>Return % override <span class="fhint">blank = global</span></span><span></span></div>
+    <div class="colhdr acct" style="display:grid;grid-template-columns:1fr 110px 130px 90px 24px;gap:7px;"><span>Account name</span><span>Balance ($)</span><span>Tax treatment</span><span title="Optional: override the global blended return for this account. Leave blank to use the global market assumption from Market assumptions.">Return % <span class="fhint">optional</span> ⓘ</span><span></span></div>
     <div id="accts"></div>
     <button class="btn-link" onclick="addAcct()">+ Add account</button>
   </div>
