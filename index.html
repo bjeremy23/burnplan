@@ -185,7 +185,8 @@ td.dep{color:var(--red)}
 <div class="sidebar">
   <div class="sidebar-logo"><div class="lt">RetirePlan</div><div class="ls">Personal financial planner</div></div>
   <div class="nav-section">Plan setup</div>
-  <div class="nav-item active" onclick="goTab('setup')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Setup</div>
+  <div class="nav-item active" onclick="goTab('setup')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Financial setup</div>
+  <div class="nav-item" onclick="goTab('withdrawal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Withdrawal plan</div>
   <div class="nav-section">Analysis</div>
   <div class="nav-item" onclick="goTab('proj')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Projections</div>
   <div class="nav-item" onclick="goTab('compare')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Compare scenarios</div>
@@ -209,7 +210,8 @@ td.dep{color:var(--red)}
   <div class="page-title" id="ptitle">Setup &amp; assumptions</div>
   <div class="page-sub" id="psub">Configure your accounts, assumptions, and income streams</div>
   <div class="tabs-bar">
-    <button class="tab-btn active" onclick="goTab('setup')">Setup</button>
+    <button class="tab-btn active" onclick="goTab('setup')">Financial setup</button>
+    <button class="tab-btn" onclick="goTab('withdrawal')">Withdrawal plan</button>
     <button class="tab-btn" onclick="goTab('proj')">Projections</button>
     <button class="tab-btn" onclick="goTab('compare')">Compare</button>
     <button class="tab-btn" onclick="goTab('stress')">Stress tests</button>
@@ -294,10 +296,11 @@ td.dep{color:var(--red)}
 <div class="panel">
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Social Security <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">SS is a lifetime benefit — no end age. Enter your estimated benefit in <strong style="color:var(--text);">today's dollars at your current age</strong> (as shown on ssa.gov). COLA will be applied from your current age forward, so by the time you claim at your chosen start age the benefit will already reflect years of cost-of-living increases. Leave all fields blank to exclude.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">Enter your estimated benefit in <strong style="color:var(--text);">today's dollars at your current age</strong> (as shown on ssa.gov). COLA compounds from your current age forward. Leave all fields blank to exclude.</p>
+
     <div class="income-card" style="border-color:rgba(34,197,94,.2);">
       <div class="income-hdr">
-        <div style="display:flex;align-items:center;gap:8px;"><span class="income-tag ss-tag">Social Security</span><input type="text" id="ss-name" value="SS" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:120px;color:var(--text);"></div>
+        <div style="display:flex;align-items:center;gap:8px;"><span class="income-tag ss-tag">My SS</span><input type="text" id="ss-name" value="My SS" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:120px;color:var(--text);"></div>
         <span style="font-size:11px;color:var(--muted);">Lifetime — no end age</span>
       </div>
       <div class="g3">
@@ -306,6 +309,25 @@ td.dep{color:var(--red)}
         <div class="fg" style="margin:0;"><label class="fl">COLA % <span class="fhint">blank=0%</span></label><input type="number" id="ss-cola" value="3.3" step="0.1"></div>
       </div>
       <div style="margin-top:9px;"><label class="fl">Taxability</label><select id="ss-tax" style="width:auto;max-width:270px;"><option>85% taxable (standard SS rule)</option><option>50% taxable (lower income)</option><option>Tax-free (below threshold)</option></select></div>
+
+      <!-- Spouse SS toggle -->
+      <div style="margin-top:13px;padding-top:11px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="ss2-toggle" onchange="document.getElementById('ss2-section').style.display=this.checked?'block':'none'" style="width:auto;cursor:pointer;">
+        <label for="ss2-toggle" style="font-size:12px;color:var(--muted);cursor:pointer;">Include spouse's Social Security</label>
+      </div>
+
+      <div id="ss2-section" style="display:none;margin-top:11px;padding-top:11px;border-top:1px solid var(--border);">
+        <div class="income-hdr" style="margin-bottom:9px;">
+          <div style="display:flex;align-items:center;gap:8px;"><span class="income-tag ss-tag">Spouse SS</span><input type="text" id="ss2-name" value="Spouse SS" style="border:none;background:transparent;font-size:13px;font-weight:500;padding:0;width:120px;color:var(--text);"></div>
+          <span style="font-size:11px;color:var(--muted);">Lifetime — no end age · COLA from current age</span>
+        </div>
+        <div class="g3">
+          <div class="fg" style="margin:0;"><label class="fl">SS start age</label><input type="number" id="ss2-start" placeholder="e.g. 67"></div>
+          <div class="fg" style="margin:0;"><label class="fl">Annual benefit (today's $)</label><input type="number" id="ss2-amt" placeholder="e.g. 36000"></div>
+          <div class="fg" style="margin:0;"><label class="fl">COLA % <span class="fhint">blank=0%</span></label><input type="number" id="ss2-cola" value="3.3" step="0.1"></div>
+        </div>
+        <div style="margin-top:9px;"><label class="fl">Taxability</label><select id="ss2-tax" style="width:auto;max-width:270px;"><option>85% taxable (standard SS rule)</option><option>50% taxable (lower income)</option><option>Tax-free (below threshold)</option></select></div>
+      </div>
     </div>
   </div>
 </div>
@@ -313,7 +335,7 @@ td.dep{color:var(--red)}
 <div class="panel">
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Other income streams <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Pension, annuity, rental, part-time work, spousal SS, etc. Each reduces portfolio withdrawal while active.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Pension, annuity, rental income, part-time work, etc. COLA for these streams compounds from their <strong style="color:var(--text);">start date</strong> — the amount you enter is what you expect to receive in the first year of that stream. Each reduces portfolio withdrawal while active.</p>
     <div id="income-streams"></div>
     <button class="btn-link" onclick="addIncome()">+ Add income stream</button>
   </div>
@@ -349,11 +371,35 @@ td.dep{color:var(--red)}
   </div>
 </div>
 
+<div style="display:flex;gap:9px;margin-top:7px;padding-bottom:22px;align-items:center;flex-wrap:wrap;">
+  <button class="btn btn-primary" onclick="goTab('withdrawal')">Next: Withdrawal plan →</button>
+  <button class="btn" onclick="exportSettings()" title="Save all setup fields to a JSON file">Export settings</button>
+  <label class="btn" style="cursor:pointer;" title="Load a previously exported settings file">
+    Import settings
+    <input type="file" accept=".json" onchange="importSettings(event)" style="display:none;">
+  </label>
+  <button class="btn" onclick="if(confirm('Reset all inputs to defaults?')){window.location.href=window.location.href.split('?')[0]+'?t='+Date.now();}">Reset all</button>
+  <span style="font-size:11px;color:var(--muted);font-style:italic;">Export/Import saves your entire plan — both tabs — in one file.</span>
+</div>
+</div>
+
+<!-- WITHDRAWAL PLAN -->
+<div class="tab-content" id="tab-withdrawal">
+
 <div class="panel">
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Withdrawal schedule <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:4px;">Define periods in order — they run <strong style="color:var(--text);">sequentially</strong>. Each period runs until its duration ends, then the next begins.</p>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;"><strong style="color:var(--text);">Fixed years</strong> — move to the next period after N years regardless of account balance. <strong style="color:var(--text);">Until depleted</strong> — stay in this period until all its accounts are empty, then move to the next. Every period runs until its accounts are dry either way. If an account within a period runs out, the others absorb its share. When all period accounts are exhausted, any remaining need draws from accounts not in the schedule.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:4px;">Define the order in which accounts are drawn down during retirement. Each <strong style="color:var(--text);">period</strong> specifies which accounts to use and what percentage of the net withdrawal need each covers. Periods run <strong style="color:var(--text);">sequentially</strong> — not concurrently.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:8px;"><strong style="color:var(--text);">Fixed years</strong> — move to the next period after N years regardless of balance. <strong style="color:var(--text);">Until depleted</strong> — stay in this period until all its accounts are empty, then move to the next. If an account within a period runs dry, the others absorb its share. When all scheduled accounts are exhausted, any remaining need draws from unscheduled accounts.</p>
+    <div style="background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);border-radius:7px;padding:11px 13px;margin-bottom:13px;">
+      <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Example</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;">
+        <strong style="color:var(--text);">Period 1</strong> — Cash/MM · 100% · <em>1 year</em> — spend cash reserves first, nothing else is touched.<br>
+        <strong style="color:var(--text);">Period 2</strong> — MSFT Stock · 100% · <em>3 years</em> — sell stock over the next 3 years.<br>
+        <strong style="color:var(--text);">Period 3</strong> — Traditional IRA · 100% · <em>Until depleted</em> — draw down tax-deferred account.<br>
+        <strong style="color:var(--text);">Period 4</strong> — Roth IRA · 100% · <em>Until depleted</em> — finally draw the Roth, letting it grow tax-free as long as possible.
+      </div>
+    </div>
     <div id="wd-periods"></div>
     <button class="btn-link" onclick="addWdPeriod()">+ Add withdrawal period</button>
     <p id="wd-note" class="info-note" style="margin-top:8px;">No periods defined — will draw accounts in entry order until depleted.</p>
@@ -363,7 +409,16 @@ td.dep{color:var(--red)}
 <div class="panel">
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Withdrawal scenarios <span class="badge badge-req">at least one required</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">Total annual spending target. SS and other income reduce how much comes from your portfolio. Base plan required.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:11px;">Set your annual spending target in today's dollars — the app inflates it automatically each year. SS and other income reduce how much needs to come from your portfolio. Add comparison scenarios to model different spending levels side by side.</p>
+    <div style="background:rgba(79,156,249,.06);border:1px solid rgba(79,156,249,.2);border-radius:7px;padding:11px 13px;margin-bottom:13px;">
+      <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Example — step-down spending plan</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;">
+        <strong style="color:var(--text);">$120,000 for 10 years</strong> — active early retirement, travel, higher spending.<br>
+        <strong style="color:var(--text);">$100,000 for 10 years</strong> — slowing down, spending reduces naturally.<br>
+        <strong style="color:var(--text);">$85,000 remaining</strong> — later years, lower activity, SS covering more of the need.<br>
+        <em style="font-size:11px;">Add a comparison scenario at flat $100K/yr to see how much the step-down saves over a lifetime.</em>
+      </div>
+    </div>
     <div id="val-err" class="val-err">Base plan withdrawal amount is required.</div>
     <div class="scenario-card base">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;"><span class="badge badge-req">Base plan</span><span style="font-size:12px;color:var(--muted);">Required</span></div>
@@ -387,12 +442,6 @@ td.dep{color:var(--red)}
 
 <div style="display:flex;gap:9px;margin-top:7px;padding-bottom:22px;">
   <button class="btn btn-primary" onclick="runProjections()">Run projections →</button>
-  <button class="btn" onclick="exportSettings()" title="Save all setup fields to a JSON file">Export settings</button>
-  <label class="btn" style="cursor:pointer;" title="Load a previously exported settings file">
-    Import settings
-    <input type="file" accept=".json" onchange="importSettings(event)" style="display:none;">
-  </label>
-  <button class="btn" onclick="if(confirm('Reset all inputs to defaults?')){window.location.href=window.location.href.split('?')[0]+'?t='+Date.now();}">Reset all</button>
 </div>
 </div>
 
@@ -532,8 +581,8 @@ const IRS={73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19
 const COLORS=['#4f9cf9','#22c55e','#f59e0b','#a78bfa','#f97316','#ec4899','#06b6d4','#84cc16'];
 let simData=null,charts={},stressData=null,wdPeriodCount=0,scCount=0,stressCount=1;
 
-const TITLES={setup:'Setup & assumptions',proj:'Projections',compare:'Compare scenarios',stress:'Stress tests',saved:'Saved results'};
-const SUBS={setup:'Configure accounts, assumptions and income streams',proj:'Year-by-year projection with market scenarios',compare:'Overlay multiple withdrawal scenarios',stress:'Simulate market crashes and recoveries',saved:'Saved stress tests and snapshots'};
+const TITLES={setup:'Financial setup',withdrawal:'Withdrawal plan',proj:'Projections',compare:'Compare scenarios',stress:'Stress tests',saved:'Saved results'};
+const SUBS={setup:'Accounts, contributions, income and market assumptions',withdrawal:'Withdrawal schedule and annual spending scenarios',proj:'Year-by-year projection with market scenarios',compare:'Overlay multiple withdrawal scenarios',stress:'Simulate market crashes and recoveries',saved:'Saved stress tests and snapshots'};
 
 function goTab(id){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
@@ -542,8 +591,7 @@ function goTab(id){
   document.getElementById('tab-'+id).classList.add('active');
   document.getElementById('ptitle').textContent=TITLES[id]||id;
   document.getElementById('psub').textContent=SUBS[id]||'';
-  const tabBtns=document.querySelectorAll('.tab-btn');
-  tabBtns.forEach(b=>{if(b.textContent.trim().toLowerCase().startsWith((TITLES[id]||'').split(' ')[0].toLowerCase()))b.classList.add('active');});
+  document.querySelectorAll('.tab-btn').forEach(b=>{if(b.getAttribute('onclick')?.includes("'"+id+"'"))b.classList.add('active');});
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   if(id==='proj'&&simData)renderProjections();
   if(id==='compare'&&simData)renderCompare();
@@ -921,7 +969,11 @@ function readConfig(){
   const filingPeriods=[...document.querySelectorAll('.filing-row')].map((fp,i)=>{const sel=fp.querySelector('.fp-sel');const ageIn=fp.querySelector('input[type=number]');return{fromAge:i===0?cur:parseInt(ageIn?.value)||cur,status:sel?.value||'mfj',stdDed:DEDV[sel?.value]||32200};});
   const ssStart=parseInt(document.getElementById('ss-start').value);
   const ssAmt=parseFloat(document.getElementById('ss-amt').value);
-  const ss=(ssStart&&ssAmt)?{name:document.getElementById('ss-name').value||'SS',startAge:ssStart,annualAmt:ssAmt,cola:parseFloat(document.getElementById('ss-cola').value)||0,taxability:document.getElementById('ss-tax').value}:null;
+  const ss=(ssStart&&ssAmt)?{name:document.getElementById('ss-name').value||'My SS',startAge:ssStart,annualAmt:ssAmt,cola:parseFloat(document.getElementById('ss-cola').value)||0,taxability:document.getElementById('ss-tax').value}:null;
+  const ss2Enabled=document.getElementById('ss2-toggle')?.checked;
+  const ss2Start=ss2Enabled?parseInt(document.getElementById('ss2-start').value):null;
+  const ss2Amt=ss2Enabled?parseFloat(document.getElementById('ss2-amt').value):null;
+  const ss2=(ss2Enabled&&ss2Start&&ss2Amt)?{name:document.getElementById('ss2-name').value||'Spouse SS',startAge:ss2Start,annualAmt:ss2Amt,cola:parseFloat(document.getElementById('ss2-cola').value)||0,taxability:document.getElementById('ss2-tax').value}:null;
   const incomeStreams=[...document.querySelectorAll('#income-streams .income-card')].map(c=>{
     const name=c.querySelector('.inc-name')?.value||'Income';
     const startAge=parseInt(c.querySelector('.inc-start')?.value)||0;
@@ -969,7 +1021,7 @@ function readConfig(){
     const steps=stepsContainer?readSpendSteps(stepsContainer):[];
     return{label,steps,amount:steps[steps.length-1]?.amount||0};
   });
-  return{cur,ret,endAge,rmdAge,accounts,contribs,filingPeriods,ss,incomeStreams,rothPeriods,oneTimeEvents,wdPeriods,baseScenario,extraScenarios,infl:parseFloat(document.getElementById('infl').value)||3.0,stockR:parseFloat(document.getElementById('stock').value)||7.0,bondR:parseFloat(document.getElementById('bond').value)||4.67,blendStart:parseFloat(document.getElementById('blend-start').value)||70,blendEnd:parseFloat(document.getElementById('blend-end').value)||50,below:parseFloat(document.getElementById('below').value)||2.0,above:parseFloat(document.getElementById('above').value)||2.0};
+  return{cur,ret,endAge,rmdAge,accounts,contribs,filingPeriods,ss,ss2,incomeStreams,rothPeriods,oneTimeEvents,wdPeriods,baseScenario,extraScenarios,infl:parseFloat(document.getElementById('infl').value)||3.0,stockR:parseFloat(document.getElementById('stock').value)||7.0,bondR:parseFloat(document.getElementById('bond').value)||4.67,blendStart:parseFloat(document.getElementById('blend-start').value)||70,blendEnd:parseFloat(document.getElementById('blend-end').value)||50,below:parseFloat(document.getElementById('below').value)||2.0,above:parseFloat(document.getElementById('above').value)||2.0};
 }
 
 // ── Simulation helpers ────────────────────────────────────────────────────────
@@ -997,8 +1049,9 @@ function getSS(age,ss,curAge){
 function getOtherIncome(age,streams,curAge){
   return streams.filter(s=>age>=s.startAge&&(!s.endAge||age<=s.endAge)).map(s=>({
     name:s.name,
-    // Amount entered in today's dollars — COLA compounds from current age
-    amount:s.annualAmt*Math.pow(1+s.cola/100,age-curAge),
+    // COLA for other income streams starts from the stream's start date
+    // (pension, rental etc. quote what you'll receive in year 1, not today's dollars)
+    amount:s.annualAmt*Math.pow(1+s.cola/100,age-s.startAge),
     taxability:s.taxability
   }));
 }
@@ -1126,8 +1179,9 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   }
   accts.forEach(a=>{const rate=getAccountRate(a,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
   const ssIncome=getSS(age,cfg.ss,cfg.cur);
+  const ss2Income=getSS(age,cfg.ss2,cfg.cur);
   const otherIncome=getOtherIncome(age,cfg.incomeStreams,cfg.cur);
-  const totalIncome=ssIncome+otherIncome.reduce((s,i)=>s+i.amount,0);
+  const totalIncome=ssIncome+ss2Income+otherIncome.reduce((s,i)=>s+i.amount,0);
   const tradIdx=accts.findIndex(a=>a.type==='Tax-deferred');
   let rmd=0;
   if(age>=cfg.rmdAge&&tradIdx>=0){rmd=Math.min(getRMD(accts[tradIdx].balance,age),accts[tradIdx].balance);accts[tradIdx].balance=Math.max(0,accts[tradIdx].balance-rmd);}
@@ -1144,9 +1198,11 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   // Add roth conversion amount (trad->roth conversion is also ordinary income)
   let ordIncome=wdByType.tradIRA+(roth?roth.amount:0);
 
-  // SS: taxable portion
+  // SS: taxable portion (both SS streams)
   const ssTaxPct=cfg.ss?parseFloat(cfg.ss.taxability)||85:0;
+  const ss2TaxPct=cfg.ss2?parseFloat(cfg.ss2.taxability)||85:0;
   ordIncome+=ssIncome*ssTaxPct/100;
+  ordIncome+=ss2Income*ss2TaxPct/100;
 
   // Other income streams
   otherIncome.forEach(inc=>{
@@ -1169,7 +1225,7 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
     tax+=ltcgGain*ltcgRate;
   }
 
-  return{accts:finalAccts,tax:Math.round(tax),ssIncome,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
+  return{accts:finalAccts,tax:Math.round(tax),ssIncome,ss2Income,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
 }
 
 function makeWdState(cfg){
@@ -1334,12 +1390,13 @@ function renderChart(){
   destroyChart('main-chart');
   charts['main-chart']=new Chart(document.getElementById('main-chart'),{type:'line',data:{labels,datasets},options:chartOpts()});
 
-  const hasIncome=cfg.ss||cfg.incomeStreams.length>0;
+  const hasIncome=cfg.ss||cfg.ss2||cfg.incomeStreams.length>0;
   const showIncome=hasIncome&&view!=='all3';
   document.getElementById('income-chart-wrap').style.display=showIncome?'block':'none';
   if(showIncome){
     const incDs=[];
     if(cfg.ss)incDs.push({label:cfg.ss.name,data:rows.map(r=>Math.round(r.ssIncome)),borderColor:'#22c55e',borderWidth:2,pointRadius:0,fill:false,tension:.3});
+    if(cfg.ss2)incDs.push({label:cfg.ss2.name,data:rows.map(r=>Math.round(r.ss2Income||0)),borderColor:'#4ade80',borderWidth:2,pointRadius:0,fill:false,tension:.3,borderDash:[3,2]});
     cfg.incomeStreams.forEach((s,i)=>incDs.push({label:s.name,data:rows.map(r=>Math.round(r.otherIncome.find(o=>o.name===s.name)?.amount||0)),borderColor:COLORS[(i+2)%COLORS.length],borderWidth:2,pointRadius:0,fill:false,tension:.3}));
     incDs.push({label:'Net from portfolio',data:rows.map(r=>Math.round(r.netWithdrawal)),borderColor:'#f59e0b',borderWidth:2,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]});
     destroyChart('income-chart');
@@ -1366,12 +1423,13 @@ function buildBalanceTable(rows,cfg,view){
 }
 
 function buildDetailTable(rows,cfg,view){
-  const hasSSI=!!cfg.ss,hasOther=cfg.incomeStreams.length>0,hasRoth=cfg.rothPeriods.length>0,isPre=cfg.cur<cfg.ret,hasEvents=(cfg.oneTimeEvents||[]).length>0;
+  const hasSSI=!!cfg.ss,hasSS2=!!cfg.ss2,hasOther=cfg.incomeStreams.length>0,hasRoth=cfg.rothPeriods.length>0,isPre=cfg.cur<cfg.ret,hasEvents=(cfg.oneTimeEvents||[]).length>0;
   let th='<tr><th>Year</th><th>Age</th><th>Phase</th>';
   cfg.accounts.forEach(a=>th+=`<th>${a.name}</th>`);
   th+='<th>Total</th>';
   if(isPre)th+='<th>Contributions</th>';
   if(hasSSI)th+=`<th style="min-width:60px;max-width:80px;">${cfg.ss.name}</th>`;
+  if(hasSS2)th+=`<th style="min-width:60px;max-width:80px;">${cfg.ss2.name}</th>`;
   if(hasOther)cfg.incomeStreams.forEach(s=>th+=`<th>${s.name}</th>`);
   if(hasEvents)th+='<th>One-time event</th>';
   th+='<th>Spend target</th><th>From portfolio</th><th>RMD</th>';
@@ -1387,6 +1445,7 @@ function buildDetailTable(rows,cfg,view){
     tb+=`<td class="${r.total>0?'pos':'neg'}">${fmt(r.total)}</td>`;
     if(isPre)tb+=`<td class="${!r.isRet?'pos':'zer'}">${!r.isRet?fmt(cfg.contribs.reduce((s,c)=>s+c.annual+c.match,0)):'—'}</td>`;
     if(hasSSI)tb+=`<td>${r.ssIncome>0?fmt(r.ssIncome):'—'}</td>`;
+    if(hasSS2)tb+=`<td>${r.ss2Income>0?fmt(r.ss2Income):'—'}</td>`;
     if(hasOther)cfg.incomeStreams.forEach(s=>{const inc=r.otherIncome.find(o=>o.name===s.name);tb+=`<td>${inc?fmt(inc.amount):'—'}</td>`;});
     if(hasEvents){
       const evs=(cfg.oneTimeEvents||[]).filter(ev=>ev.year===r.year);
@@ -1449,7 +1508,7 @@ function renderCompare(){
 
 function runStressTest(btn){
   if(!simData){
-    if(confirm('Projections must be run first. Go to Setup tab now?')){goTab('setup');}
+    if(confirm('Projections must be run first. Go to Withdrawal plan tab now?')){goTab('withdrawal');}
     return;
   }
   const card=btn.closest('.stress-card');
@@ -1621,8 +1680,10 @@ function exportSettings(){
     contribs:cfg.contribs,
     filingPeriods:cfg.filingPeriods,
     ss:cfg.ss,
+    ss2:cfg.ss2,
     incomeStreams:cfg.incomeStreams,
     rothPeriods:cfg.rothPeriods,
+    oneTimeEvents:cfg.oneTimeEvents,
     wdPeriods:cfg.wdPeriods,
     baseScenario:cfg.baseScenario,
     extraScenarios:cfg.extraScenarios,
@@ -1722,7 +1783,7 @@ function applySettings(s){
   }
   // SS
   if(s.ss){
-    document.getElementById('ss-name').value=s.ss.name||'My SS benefit';
+    document.getElementById('ss-name').value=s.ss.name||'My SS';
     document.getElementById('ss-start').value=s.ss.startAge||67;
     document.getElementById('ss-amt').value=s.ss.annualAmt||'';
     document.getElementById('ss-cola').value=s.ss.cola??3.3;
@@ -1732,6 +1793,23 @@ function applySettings(s){
     document.getElementById('ss-start').value=67;
     document.getElementById('ss-amt').value='';
     document.getElementById('ss-cola').value=3.3;
+  }
+  // Spouse SS
+  if(s.ss2){
+    document.getElementById('ss2-toggle').checked=true;
+    document.getElementById('ss2-section').style.display='block';
+    document.getElementById('ss2-name').value=s.ss2.name||'Spouse SS';
+    document.getElementById('ss2-start').value=s.ss2.startAge||'';
+    document.getElementById('ss2-amt').value=s.ss2.annualAmt||'';
+    document.getElementById('ss2-cola').value=s.ss2.cola??3.3;
+    const tax2Sel=document.getElementById('ss2-tax');
+    [...tax2Sel.options].forEach(o=>{if(o.text===s.ss2.taxability)o.selected=true;});
+  } else {
+    document.getElementById('ss2-toggle').checked=false;
+    document.getElementById('ss2-section').style.display='none';
+    document.getElementById('ss2-start').value='';
+    document.getElementById('ss2-amt').value='';
+    document.getElementById('ss2-cola').value=3.3;
   }
   // Other income streams
   document.getElementById('income-streams').innerHTML='';
@@ -1753,6 +1831,32 @@ function applySettings(s){
     d.innerHTML=`<input type="number" value="${r.fromAge}"><input type="number" value="${r.toAge}"><input type="number" value="${r.amount||''}"><select>${bOpts}</select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
     document.getElementById('roth-entries').appendChild(d);
   });
+  // One-time events
+  document.getElementById('one-time-events').innerHTML='';
+  if(s.oneTimeEvents?.length){
+    s.oneTimeEvents.forEach(ev=>{
+      const d=document.createElement('div');
+      d.style.cssText='display:grid;grid-template-columns:90px 1fr 120px 110px 100px 24px;gap:7px;align-items:center;margin-bottom:7px;padding:8px 10px;background:var(--surface2);border:1px solid '+(ev.type==='deposit'?'rgba(34,197,94,.35)':'rgba(239,68,68,.35)')+';border-radius:6px;';
+      const yearIn=document.createElement('input');yearIn.type='number';yearIn.value=ev.year||'';yearIn.style.textAlign='center';
+      const descIn=document.createElement('input');descIn.type='text';descIn.value=ev.description||'';descIn.placeholder='Description';
+      const acctSel=document.createElement('select');
+      const acctNames=(s.accounts||[]).map(a=>a.name);
+      acctSel.innerHTML=acctNames.length?acctNames.map(n=>`<option${n===ev.account?' selected':''}>${n}</option>`).join(''):'<option>—</option>';
+      acctSel.addEventListener('focus',()=>{
+        const names=(s.accounts||[]).map(a=>a.name);
+        acctSel.innerHTML=names.map(n=>`<option${n===ev.account?' selected':''}>${n}</option>`).join('');
+      });
+      const amtIn=document.createElement('input');amtIn.type='number';amtIn.value=ev.amount||'';
+      const typeSel=document.createElement('select');
+      [['deposit','⬆ Deposit (add)'],['withdrawal','⬇ Withdrawal (remove)']].forEach(([v,l])=>{
+        const o=document.createElement('option');o.value=v;o.textContent=l;if(v===ev.type)o.selected=true;typeSel.appendChild(o);
+      });
+      typeSel.addEventListener('change',()=>{d.style.borderColor=typeSel.value==='deposit'?'rgba(34,197,94,.35)':'rgba(239,68,68,.35)';});
+      const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='×';btn.onclick=()=>d.remove();
+      [yearIn,descIn,acctSel,amtIn,typeSel,btn].forEach(el=>d.appendChild(el));
+      document.getElementById('one-time-events').appendChild(d);
+    });
+  }
   // Withdrawal periods
   document.getElementById('wd-periods').innerHTML='';
   wdPeriodCount=0;
