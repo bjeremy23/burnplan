@@ -450,7 +450,9 @@ td.dep{color:var(--red)}
   <div class="proj-ctrls">
     <div style="display:flex;align-items:center;gap:8px;">
       <label style="font-size:12px;color:var(--muted);">Plan:</label>
-      <select id="proj-sc-sel" onchange="renderProjections()" style="width:auto;"></select>
+      <select id="proj-sc-sel" onchange="renderProjections()" style="width:auto;">
+      <option value="base">Base plan</option>
+    </select>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <label style="font-size:12px;color:var(--muted);">Market view:</label>
@@ -1208,19 +1210,29 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   const totalIncome=ssIncome+ss2Income+otherIncome.reduce((s,i)=>s+i.amount,0);
   const tradIdx=accts.findIndex(a=>a.type==='Tax-deferred');
   let rmd=0;
-  if(age>=cfg.rmdAge&&tradIdx>=0){rmd=Math.min(getRMD(accts[tradIdx].balance,age),accts[tradIdx].balance);accts[tradIdx].balance=Math.max(0,accts[tradIdx].balance-rmd);}
+  if(age>=cfg.rmdAge&&tradIdx>=0){
+    // RMD is a forced distribution ON TOP of the spend target — not subtracted from it
+    rmd=Math.min(getRMD(accts[tradIdx].balance,age),accts[tradIdx].balance);
+    accts[tradIdx].balance=Math.max(0,accts[tradIdx].balance-rmd);
+    // Track RMD in wdByType so it gets taxed correctly
+  }
   const roth=getRoth(age,cfg.rothPeriods);
-  if(roth){const fi=accts.findIndex(a=>a.type==='Tax-deferred');const ti=accts.findIndex(a=>a.type==='Tax-free (Roth)');if(fi>=0&&ti>=0){const amt=Math.min(roth.amount,accts[fi].balance);accts[fi].balance-=amt;accts[ti].balance+=amt;}}
-  // SS and income apply first; portfolio covers only the remainder
+  if(roth){
+    // Roth conversion: also ON TOP of spend target — moves trad->Roth, net effect is just tax cost
+    const fi=accts.findIndex(a=>a.type==='Tax-deferred');
+    const ti=accts.findIndex(a=>a.type==='Tax-free (Roth)');
+    if(fi>=0&&ti>=0){const amt=Math.min(roth.amount,accts[fi].balance);accts[fi].balance-=amt;accts[ti].balance+=amt;}
+  }
+  // SS and income apply first; withdrawal schedule covers the remaining spend need
+  // RMD and Roth conversions happen separately on top
   const netWd=Math.max(0,wdAmt-totalIncome);
   const result=withdrawFromSchedule(accts,netWd,wdState,cfg);
   const finalAccts=result.accts;
   const wdByType=result.wdByType||{tradIRA:0,roth:0,taxable:0,cash:0};
 
-  // Ordinary income = trad IRA withdrawals (incl RMD + non-RMD) + roth conversion + SS taxable portion + taxable other income
-  // RMD already came out of trad IRA balance above, so wdByType.tradIRA captures all trad draws including RMD
-  // Add roth conversion amount (trad->roth conversion is also ordinary income)
-  let ordIncome=wdByType.tradIRA+(roth?roth.amount:0);
+  // Ordinary income = trad IRA withdrawals + RMD + roth conversion + SS taxable + other income
+  // RMD came out of trad IRA separately, so add it explicitly to ordinary income
+  let ordIncome=(wdByType.tradIRA||0)+rmd+(roth?roth.amount:0);
 
   // SS: taxable portion (both SS streams)
   const ssTaxPct=cfg.ss?parseFloat(cfg.ss.taxability)||85:0;
@@ -1239,8 +1251,13 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   const brackets=fp.status==='mfj'
     ?[[23200,.1],[94300,.12],[201050,.22],[383900,.24],[487450,.32],[731200,.35],[Infinity,.37]]
     :[[11600,.1],[47150,.12],[100525,.22],[191950,.24],[243725,.32],[609350,.35],[Infinity,.37]];
-  let tax=0,prev=0;
-  for(const[top,rate]of brackets){if(taxable<=prev)break;tax+=Math.min(taxable-prev,top-prev)*rate;prev=top;}
+  let tax=0,prev=0,marginalRate=0;
+  for(const[top,rate]of brackets){
+    if(taxable<=prev)break;
+    tax+=Math.min(taxable-prev,top-prev)*rate;
+    if(taxable>prev)marginalRate=rate; // track the highest bracket reached
+    prev=top;
+  }
 
   // LTCG tax on taxable account withdrawals (simplified: 0%/15%/20% based on ordinary income)
   const ltcgGain=wdByType.taxable;
@@ -1249,7 +1266,8 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
     tax+=ltcgGain*ltcgRate;
   }
 
-  return{accts:finalAccts,tax:Math.round(tax),ssIncome,ss2Income,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
+  const marginalBracket=taxable>0?Math.round(marginalRate*100):0;
+  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ssIncome,ss2Income,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
 }
 
 function makeWdState(cfg){
@@ -1454,9 +1472,9 @@ function buildDetailTable(rows,cfg,view){
   if(hasSS2)th+=`<th style="min-width:60px;max-width:80px;">${cfg.ss2.name}</th>`;
   if(hasOther)cfg.incomeStreams.forEach(s=>th+=`<th>${s.name}</th>`);
   if(hasEvents)th+='<th>One-time event</th>';
-  th+='<th>Spend target</th><th>From portfolio</th><th>RMD</th>';
-  if(hasRoth)th+='<th>Roth Conv</th><th>Bracket</th><th>Conv Tax</th>';
-  th+='<th>Est. Tax</th></tr>';
+  th+='<th>Spend target</th><th>From portfolio</th><th>RMD (additional)</th>';
+  if(hasRoth)th+='<th>Roth Conv</th><th>Conv Tax</th>';
+  th+='<th>Marginal bracket</th><th>Est. Tax</th></tr>';
   document.getElementById('proj-thead').innerHTML=th;
   let tb='';let prevPhase=null;
   rows.forEach(r=>{
@@ -1478,7 +1496,8 @@ function buildDetailTable(rows,cfg,view){
     };
     tb+=`<td>${r.isRet?fmt(r.wdTarget):'—'}</td>`;
     tb+=`<td>${r.netWithdrawal>0?fmt(r.netWithdrawal):'—'}</td><td>${r.rmd>0?fmt(r.rmd):'—'}</td>`;
-    if(hasRoth){tb+=`<td>${r.roth?fmt(r.roth.amount):'—'}</td><td>${r.roth?r.roth.bracket+'%':'—'}</td><td class="${r.roth?'neg':'zer'}">${r.roth?fmt(r.roth.taxCost):'—'}</td>`;}
+    if(hasRoth){tb+=`<td>${r.roth?fmt(r.roth.amount):'—'}</td><td class="${r.roth?'neg':'zer'}">${r.roth?fmt(r.roth.taxCost):'—'}</td>`;}
+    tb+=`<td>${r.isRet&&r.marginalBracket>0?r.marginalBracket+'%':'—'}</td>`;
     tb+=`<td class="${r.tax>0?'neg':'zer'}">${r.tax>0?fmt(r.tax):'—'}</td></tr>`;
   });
   document.getElementById('proj-tbody').innerHTML=tb;
@@ -1490,10 +1509,10 @@ function refreshScenarioDropdown(){
   // Update projections dropdown
   const sel=document.getElementById('proj-sc-sel');
   if(sel){
-    const curVal=sel.value;
+    const curVal=sel.value||'base';
     sel.innerHTML=`<option value="base">${baseName}</option>`;
     extras.forEach((lbl,i)=>sel.innerHTML+=`<option value="${i}">${lbl}</option>`);
-    sel.value=curVal;
+    sel.value=[...sel.options].some(o=>o.value===curVal)?curVal:'base';
   }
   // Update stress test scenario dropdown
   const stressSel=document.getElementById('stress-sc-view');
@@ -1767,9 +1786,9 @@ function exportCSV(){
   if(isPre)hdrs.push('Contributions');
   if(hasSSI)hdrs.push(cfg.ss.name);
   if(hasOther)cfg.incomeStreams.forEach(s=>hdrs.push(s.name));
-  hdrs.push('SpendTarget','NetWithdrawal','RMD');
-  if(hasRoth)hdrs.push('RothConv','Bracket','ConvTax');
-  hdrs.push('EstTax');
+  hdrs.push('SpendTarget','FromPortfolio','RMD');
+  if(hasRoth)hdrs.push('RothConv','ConvTax');
+  hdrs.push('MarginalBracket','EstTax');
   const csvRows=[hdrs.join(',')];
   tableRows.forEach(r=>{
     const row=[r.year,r.age,r.isRet?'Retired':'Pre-ret',r.filing.status,r.filing.stdDed,...r.accts.map(a=>Math.round(a.balance)),Math.round(r.total)];
@@ -1777,8 +1796,8 @@ function exportCSV(){
     if(hasSSI)row.push(Math.round(r.ssIncome));
     if(hasOther)cfg.incomeStreams.forEach(s=>{const inc=r.otherIncome.find(o=>o.name===s.name);row.push(inc?Math.round(inc.amount):0);});
     row.push(Math.round(r.wdTarget),Math.round(r.netWithdrawal),Math.round(r.rmd));
-    if(hasRoth){row.push(r.roth?r.roth.amount:0,r.roth?r.roth.bracket+'%':'',r.roth?r.roth.taxCost:0);}
-    row.push(r.tax);
+    if(hasRoth){row.push(r.roth?r.roth.amount:0,r.roth?r.roth.taxCost:0);}
+    row.push(r.marginalBracket?r.marginalBracket+'%':'—',r.tax);
     csvRows.push(row.map(v=>typeof v==='string'&&v.includes(',')?`"${v}"`:v).join(','));
   });
   const blob=new Blob([csvRows.join('\n')],{type:'text/csv'});
@@ -2096,6 +2115,7 @@ function esc(str){return(str||'').replace(/"/g,'\u0026quot;').replace(/</g,'\u00
 
 updateMode();
 renderSaved();
+refreshScenarioDropdown();
 
 function resetAll(){
   // Browser blocks confirm() on file:// — use inline confirmation instead
