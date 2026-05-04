@@ -497,7 +497,7 @@ td.dep{color:var(--red)}
     </div>
     <div class="table-wrap" style="margin-top:14px;">
       <div style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 11px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:7px 7px 0 0;border-bottom:none;">
-        ⚠ <strong style="color:#fbbf24;">Est. Tax is a simplified federal income tax estimate only.</strong> It uses standard deduction and progressive brackets but does not include state taxes, Medicare surtax, AMT, itemized deductions, or other adjustments. Not a substitute for professional tax advice.
+        ⚠ <strong style="color:#fbbf24;">Est. Tax is a simplified federal income tax estimate only.</strong> It uses standard deduction and progressive brackets but does not include state taxes, Medicare surtax, AMT, itemized deductions, or other adjustments. <strong style="color:#fbbf24;">Conv Tax</strong> shows the bracket tax cost of Roth conversions. <strong style="color:#fbbf24;">LTCG Tax</strong> shows capital gains tax on taxable account withdrawals. Both are already included in Est. Tax. Not a substitute for professional tax advice.
       </div>
       <table><thead id="proj-thead"></thead><tbody id="proj-tbody"></tbody></table>
     </div>
@@ -1093,14 +1093,16 @@ function readConfig(){
   const oneTimeEvents=[...document.querySelectorAll('#one-time-events > div')].map(d=>{
     const ins=d.querySelectorAll('input');
     const sels=d.querySelectorAll('select');
+    const acctSel=sels[0];
+    const account=acctSel?.options[acctSel.selectedIndex]?.text||acctSel?.dataset?.account||'';
     return{
       year:parseInt(ins[0]?.value)||0,
       description:ins[1]?.value||'',
-      account:sels[0]?.options[sels[0].selectedIndex]?.text||'',
+      account,
       amount:parseFloat(ins[2]?.value)||0,
       type:sels[1]?.value||'deposit'
     };
-  }).filter(e=>e.year&&e.amount);
+  }).filter(e=>e.year&&e.amount&&e.account&&e.account!=='— add accounts first —');
   const baseSteps=readSpendSteps(document.getElementById('base-steps'));
   const baseScenario={label:document.getElementById('base-lbl').value||'Base plan',steps:baseSteps,amount:baseSteps[baseSteps.length-1]?.amount||0};
   const extraScenarios=[...document.querySelectorAll('#extra-scenarios .scenario-card')].map(s=>{
@@ -1267,8 +1269,40 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
   return{accts,wdState,wdByType,acctWd};
 }
 
-function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost,returnMultiplier){
+function simulateYear(state,age,cfg,wdAmt,yr,offset,crashDrop,wdState,recoveryBoost,returnMultiplier){
   const accts=state.map(a=>({...a}));
+  const oneTimeWdByType={tradIRA:0,roth:0,taxable:0,cash:0};
+
+  // Apply one-time events to accts AFTER copying state — this ensures each simulate() call
+  // gets a fresh accts copy and the events are applied correctly
+  function otTypeKey(t){return t==='Tax-deferred'?'tradIRA':t==='Tax-free (Roth)'?'roth':t==='Taxable LTCG'?'taxable':'cash';}
+  (cfg.oneTimeEvents||[]).forEach(ev=>{
+    if(ev.year!==yr)return;
+    if(ev.type==='deposit'){
+      const idx=accts.findIndex(a=>a.name.trim().toLowerCase()===ev.account.trim().toLowerCase());
+      if(idx>=0)accts[idx].balance+=ev.amount;
+    } else {
+      let rem=ev.amount;
+      const primaryIdx=accts.findIndex(a=>a.name.trim().toLowerCase()===ev.account.trim().toLowerCase());
+      if(primaryIdx>=0){
+        const take=Math.min(rem,accts[primaryIdx].balance);
+        accts[primaryIdx].balance=Math.max(0,accts[primaryIdx].balance-take);
+        oneTimeWdByType[otTypeKey(accts[primaryIdx].type)]+=take;
+        rem-=take;
+      }
+      if(rem>0.01){
+        for(let i=0;i<accts.length&&rem>0.01;i++){
+          if(i===primaryIdx)continue;
+          const take=Math.min(rem,accts[i].balance);
+          accts[i].balance=Math.max(0,accts[i].balance-take);
+          oneTimeWdByType[otTypeKey(accts[i].type)]+=take;
+          rem-=take;
+        }
+      }
+    }
+  });
+
+  const otWd=oneTimeWdByType;
   const isRet=age>=cfg.ret;
   const fp=getFiling(age,cfg.filingPeriods);
   const cf=1-(crashDrop||0);
@@ -1276,7 +1310,7 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   if(!isRet){
     cfg.contribs.forEach(c=>{if(age<c.stopAt){const idx=accts.findIndex(a=>a.name===c.account);if(idx>=0)accts[idx].balance+=c.annual+c.match;}});
     accts.forEach(a=>{const rate=getAccountRate(a,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
-    return{accts,tax:0,ssIncome:0,otherIncome:[],rmd:0,roth:null,netWithdrawal:0,totalIncome:0,wdState};
+    return{accts,tax:0,ssIncome:0,otherIncome:[],rmd:0,roth:null,netWithdrawal:0,totalIncome:0,wdState,oneTimeWdByType,ltcgTax:0,marginalBracket:0};
   }
   accts.forEach(a=>{const rate=getAccountRate(a,age,cfg,offset)*rm;a.balance=Math.max(0,a.balance*(1+rate)*cf);});
   const ssIncome=getSS(age,cfg.ss,cfg.cur);
@@ -1307,7 +1341,8 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
 
   // Ordinary income = trad IRA withdrawals + RMD + roth conversion + SS taxable + other income
   // RMD came out of trad IRA separately, so add it explicitly to ordinary income
-  let ordIncome=(wdByType.tradIRA||0)+rmd+(roth?roth.amount:0);
+  // Also include any one-time withdrawals from tax-deferred accounts
+  let ordIncome=(wdByType.tradIRA||0)+(otWd.tradIRA||0)+rmd+(roth?roth.amount:0);
 
   // SS: taxable portion (both SS streams)
   const ssTaxPct=cfg.ss?parseFloat(cfg.ss.taxability)||85:0;
@@ -1336,10 +1371,12 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   }
 
   // LTCG tax on taxable account withdrawals (0%/15%/20% based on ordinary income)
-  const ltcgGain=wdByType.taxable;
+  // Includes both scheduled withdrawals and one-time events from taxable accounts
+  const ltcgGain=(wdByType.taxable||0)+(otWd.taxable||0);
   let ltcgTax=0;
   if(ltcgGain>0){
-    const ltcgRate=ordIncome>553850?0.20:ordIncome>89250?0.15:0;
+    const isMFJ=fp.status==='mfj';
+    const ltcgRate=ordIncome>(isMFJ?583750:518900)?0.20:ordIncome>(isMFJ?89250:47025)?0.15:0;
     ltcgTax=ltcgGain*ltcgRate;
     tax+=ltcgTax;
   }
@@ -1359,7 +1396,7 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
     rothTaxCost=Math.max(0,Math.round(bracketTaxWithConv-bracketTaxWithoutConv));
   }
 
-  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ltcgTax:Math.round(ltcgTax),ssIncome,ss2Income,otherIncome,rmd,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
+  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ltcgTax:Math.round(ltcgTax),ssIncome,ss2Income,otherIncome,rmd,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState,oneTimeWdByType};
 }
 
 function makeWdState(cfg){
@@ -1396,17 +1433,7 @@ function simulate(cfg,scenario,offset=0,crashes=[]){
     const yr=baseYear+(age-cfg.cur);
     const wdAmt=getWdTarget(age,scenario,cfg.ret,cfg.infl);
 
-    // Apply one-time events at start of year (before growth and withdrawals)
-    const baseYear2=baseYear; // already defined above
-    (cfg.oneTimeEvents||[]).forEach(ev=>{
-      if(ev.year===yr){
-        const idx=state.findIndex(a=>a.name.trim().toLowerCase()===ev.account.trim().toLowerCase());
-        if(idx>=0){
-          if(ev.type==='deposit') state[idx].balance+=ev.amount;
-          else state[idx].balance=Math.max(0,state[idx].balance-ev.amount);
-        }
-      }
-    });
+    const oneTimeWdByType={tradIRA:0,roth:0,taxable:0,cash:0};
 
     // Check for crash this year
     let crashDrop=0;
@@ -1435,10 +1462,10 @@ function simulate(cfg,scenario,offset=0,crashes=[]){
       }
     });
 
-    const result=simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,0,returnMultiplier);
+    const result=simulateYear(state,age,cfg,wdAmt,yr,offset,crashDrop,wdState,0,returnMultiplier);
     state=result.accts;
     wdState=result.wdState;
-    years.push({age,year:yr,isRet:age>=cfg.ret,filing:getFiling(age,cfg.filingPeriods),...result,total:result.accts.reduce((s,a)=>s+a.balance,0),wdTarget:wdAmt,acctWd:result.acctWd||{}});
+    years.push({age,year:yr,isRet:age>=cfg.ret,filing:getFiling(age,cfg.filingPeriods),...result,total:result.accts.reduce((s,a)=>s+a.balance,0),wdTarget:wdAmt,acctWd:result.acctWd||{},oneTimeWdByType:result.oneTimeWdByType||{}});
   }
   return years;
 }
@@ -1577,7 +1604,7 @@ function buildDetailTable(rows,cfg,view){
   if(hasEvents)th+='<th>One-time event</th>';
   th+='<th>Spend target</th><th>From portfolio</th><th>RMD (additional)</th>';
   if(hasRoth)th+='<th>Roth Conv</th><th>Conv Tax</th>';
-  th+='<th>Marginal bracket</th><th>Est. Tax (incl. conv)</th></tr>';
+  th+='<th>LTCG Tax</th><th>Marginal bracket</th><th>Est. Tax (incl. conv)</th></tr>';
   document.getElementById('proj-thead').innerHTML=th;
   let tb='';let prevPhase=null;
   rows.forEach(r=>{
@@ -1600,6 +1627,7 @@ function buildDetailTable(rows,cfg,view){
     tb+=`<td>${r.isRet?fmt(r.wdTarget):'—'}</td>`;
     tb+=`<td>${r.netWithdrawal>0?fmt(r.netWithdrawal):'—'}</td><td>${r.rmd>0?fmt(r.rmd):'—'}</td>`;
     if(hasRoth){tb+=`<td>${r.roth?fmt(r.roth.amount):'—'}</td><td class="${r.roth?'neg':'zer'}">${r.roth?fmt(r.roth.taxCost):'—'}</td>`;}
+    tb+=`<td class="${r.ltcgTax>0?'neg':'zer'}">${r.ltcgTax>0?fmt(r.ltcgTax):'—'}</td>`;
     tb+=`<td>${r.isRet&&r.marginalBracket>0?r.marginalBracket+'%':'—'}</td>`;
     tb+=`<td class="${r.tax>0?'neg':'zer'}">${r.tax>0?fmt(r.tax):'—'}</td></tr>`;
   });
@@ -1891,7 +1919,7 @@ function exportCSV(){
   if(hasOther)cfg.incomeStreams.forEach(s=>hdrs.push(s.name));
   hdrs.push('SpendTarget','FromPortfolio','RMD');
   if(hasRoth)hdrs.push('RothConv','ConvTax');
-  hdrs.push('MarginalBracket','EstTax');
+  hdrs.push('LTCGTax','MarginalBracket','EstTax');
   const csvRows=[hdrs.join(',')];
   tableRows.forEach(r=>{
     const row=[r.year,r.age,r.isRet?'Retired':'Pre-ret',r.filing.status,r.filing.stdDed,...r.accts.map(a=>Math.round(a.balance)),Math.round(r.total)];
@@ -1900,7 +1928,7 @@ function exportCSV(){
     if(hasOther)cfg.incomeStreams.forEach(s=>{const inc=r.otherIncome.find(o=>o.name===s.name);row.push(inc?Math.round(inc.amount):0);});
     row.push(Math.round(r.wdTarget),Math.round(r.netWithdrawal),Math.round(r.rmd));
     if(hasRoth){row.push(r.roth?r.roth.amount:0,r.roth?r.roth.taxCost:0);}
-    row.push(r.marginalBracket?r.marginalBracket+'%':'—',r.tax);
+    row.push(r.ltcgTax||0,r.marginalBracket?r.marginalBracket+'%':'—',r.tax);
     csvRows.push(row.map(v=>typeof v==='string'&&v.includes(',')?`"${v}"`:v).join(','));
   });
   const blob=new Blob([csvRows.join('\n')],{type:'text/csv'});
