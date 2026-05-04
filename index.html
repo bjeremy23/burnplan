@@ -89,7 +89,7 @@ select option{background:var(--surface2)}
 .btn-link:hover{text-decoration:underline}
 .ri{display:grid;gap:7px;align-items:center;margin-bottom:7px}
 .ri.acct{grid-template-columns:1fr 110px 130px 90px 24px}
-.ri.contrib{grid-template-columns:1fr 95px 95px 100px 24px}
+.ri.contrib{grid-template-columns:1fr 95px 95px 140px 24px}
 .ri.roth{grid-template-columns:65px 65px 1fr 24px}
 .ri.crash{grid-template-columns:75px 65px 95px 1fr 24px}
 .colhdr{display:grid;gap:7px;margin-bottom:4px}
@@ -108,8 +108,8 @@ select option{background:var(--surface2)}
 .wd-period-dur input[type=number]{width:60px;text-align:center}
 .wd-period-dur select{width:130px}
 .wd-period-dur span{font-size:11px;color:var(--muted);white-space:nowrap}
-.wd-alloc-row{display:grid;grid-template-columns:1fr 80px 24px;gap:7px;align-items:center;margin-bottom:6px}
-.wd-alloc-hdrs{display:grid;grid-template-columns:1fr 80px 24px;gap:7px;margin-bottom:5px}
+.wd-alloc-row{display:grid;grid-template-columns:1fr 65px 175px 24px;gap:7px;align-items:center;margin-bottom:6px}
+.wd-alloc-hdrs{display:grid;grid-template-columns:1fr 65px 175px 24px;gap:7px;margin-bottom:5px}
 .wd-alloc-hdrs span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .pct-input{text-align:center;font-family:var(--mono);font-weight:500}
 .pct-total{font-size:12px;margin-top:6px;padding:5px 9px;border-radius:5px;display:inline-flex;align-items:center;gap:5px}
@@ -251,7 +251,7 @@ td.dep{color:var(--red)}
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Pre-retirement contributions <span class="badge badge-pre">pre-retirement only</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
     <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Contributions stop at retirement age. Leave blank if already retired.</p>
-    <div class="colhdr contrib" style="display:grid;grid-template-columns:1fr 95px 95px 100px 24px;gap:7px;"><span>Account</span><span>Annual ($)</span><span>Employer match ($)</span><span>Stop at</span><span></span></div>
+    <div class="colhdr contrib" style="display:grid;grid-template-columns:1fr 95px 95px 140px 24px;gap:7px;"><span>Account</span><span>Annual ($)</span><span>Employer match ($)</span><span>Stop at</span><span></span></div>
     <div id="contrib-entries"></div>
     <button class="btn-link" onclick="addContrib()">+ Add contribution</button>
   </div>
@@ -495,7 +495,12 @@ td.dep{color:var(--red)}
         <span style="font-size:11px;color:var(--faint);">Ad space — 728×90 leaderboard</span>
       </div>
     </div>
-    <div class="table-wrap" style="margin-top:14px;"><table><thead id="proj-thead"></thead><tbody id="proj-tbody"></tbody></table></div>
+    <div class="table-wrap" style="margin-top:14px;">
+      <div style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 11px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:7px 7px 0 0;border-bottom:none;">
+        ⚠ <strong style="color:#fbbf24;">Est. Tax is a simplified federal income tax estimate only.</strong> It uses standard deduction and progressive brackets but does not include state taxes, Medicare surtax, AMT, itemized deductions, or other adjustments. Not a substitute for professional tax advice.
+      </div>
+      <table><thead id="proj-thead"></thead><tbody id="proj-tbody"></tbody></table>
+    </div>
   </div>
 </div>
 
@@ -661,7 +666,28 @@ function addAcct(){
   document.getElementById('accts').appendChild(d);
 }
 function getAcctNames(){return[...document.querySelectorAll('#accts .ri')].map(r=>r.querySelector('input[type=text]').value||'Account');}
-function addContrib(){const opts=getAcctNames().map(n=>`<option>${n}</option>`).join('');const d=document.createElement('div');d.className='ri contrib';d.innerHTML=`<select>${opts}</select><input type="number" placeholder="e.g. 23000"><input type="number" placeholder="e.g. 5000"><select><option>At retirement</option><option>Age 60</option><option>Age 62</option><option>Age 65</option><option>Age 70</option></select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;document.getElementById('contrib-entries').appendChild(d);}
+function addContrib(){
+  const opts=getAcctNames().map(n=>`<option>${n}</option>`).join('');
+  const ret=parseInt(document.getElementById('ret-age')?.value)||65;
+  const d=document.createElement('div');d.className='ri contrib';
+  d.style.gridTemplateColumns='1fr 95px 95px 140px 24px';
+  const acctSel=document.createElement('select');acctSel.innerHTML=opts||'<option>—</option>';
+  const annIn=document.createElement('input');annIn.type='number';annIn.placeholder='e.g. 23000';
+  const matchIn=document.createElement('input');matchIn.type='number';matchIn.placeholder='e.g. 5000';
+  // Stop at control — checkbox + age input
+  const stopWrap=document.createElement('div');stopWrap.style.cssText='display:flex;align-items:center;gap:5px;';
+  const chk=document.createElement('input');chk.type='checkbox';chk.className='contrib-stop-ret';chk.checked=true;chk.style.cssText='width:auto;cursor:pointer;flex-shrink:0;';chk.title='Stop at retirement age';
+  const chkLbl=document.createElement('span');chkLbl.textContent='Ret.';chkLbl.style.cssText='font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer;';chkLbl.onclick=()=>{chk.checked=!chk.checked;chk.dispatchEvent(new Event('change'));};
+  const ageIn=document.createElement('input');ageIn.type='number';ageIn.className='contrib-stop-age';ageIn.placeholder='age';ageIn.style.cssText='width:52px;display:none;text-align:center;';ageIn.title='Stop contributing at this age';
+  chk.addEventListener('change',()=>{
+    ageIn.style.display=chk.checked?'none':'block';
+    chkLbl.style.opacity=chk.checked?'1':'0.4';
+  });
+  stopWrap.appendChild(chk);stopWrap.appendChild(chkLbl);stopWrap.appendChild(ageIn);
+  const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='×';btn.onclick=()=>d.remove();
+  [acctSel,annIn,matchIn,stopWrap,btn].forEach(el=>d.appendChild(el));
+  document.getElementById('contrib-entries').appendChild(d);
+}
 function addFilingPeriod(){
   const curAge=parseInt(document.getElementById('cur-age').value)||35;
   const defaultAge=curAge+1;
@@ -737,6 +763,44 @@ function addOneTimeEvent(){
 }
 
 // ── Withdrawal period builder ─────────────────────────────────────────────────
+function makeAllocRow(acctOpts, pct, durYrs, durType){
+  const d=document.createElement('div');d.className='wd-alloc-row';
+  // Account selector
+  const acctSel=document.createElement('select');acctSel.className='wd-acct-sel';
+  acctSel.innerHTML=acctOpts||'<option>—</option>';
+  acctSel.addEventListener('change',()=>checkPctTotal(acctSel));
+  // % input
+  const pctIn=document.createElement('input');pctIn.type='number';pctIn.className='pct-input wd-pct';
+  pctIn.min=0;pctIn.max=100;pctIn.placeholder='100';pctIn.addEventListener('input',()=>checkPctTotal(pctIn));
+  if(pct!=null)pctIn.value=pct;
+  // Duration — years input + depleted select side by side
+  const durWrap=document.createElement('div');durWrap.style.cssText='display:flex;align-items:center;gap:4px;';
+  const yrsIn=document.createElement('input');yrsIn.type='number';yrsIn.min=1;yrsIn.placeholder='yrs';yrsIn.className='wd-row-yrs';yrsIn.style.cssText='width:52px;text-align:center;';
+  const orSpan=document.createElement('span');orSpan.textContent='or';orSpan.style.cssText='font-size:11px;color:var(--muted);flex-shrink:0;';
+  const durSel=document.createElement('select');durSel.className='wd-row-dur';durSel.style.cssText='width:100px;font-size:11px;flex:1;min-width:0;';
+  [['depleted','Until depleted']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;durSel.appendChild(o);});
+  // Sync mutual exclusion
+  yrsIn.addEventListener('input',()=>{
+    const h=yrsIn.value&&parseInt(yrsIn.value)>0;
+    durSel.classList.toggle('greyed',h);if(h)durSel.value='depleted';
+  });
+  durSel.addEventListener('change',()=>{
+    yrsIn.classList.toggle('greyed',durSel.value!=='');if(durSel.value)yrsIn.value='';
+  });
+  if(durYrs){
+    // Years explicitly set — show years, grey out depleted select
+    yrsIn.value=durYrs;
+    durSel.classList.add('greyed');
+  }
+  // If no durYrs, both start ungreyed so user can choose either
+  durWrap.appendChild(yrsIn);durWrap.appendChild(orSpan);durWrap.appendChild(durSel);
+  // Remove button
+  const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='×';
+  btn.onclick=()=>{d.remove();checkPctTotal(d.querySelector('.wd-pct'));};
+  [acctSel,pctIn,durWrap,btn].forEach(el=>d.appendChild(el));
+  return d;
+}
+
 function addWdPeriod(){
   wdPeriodCount++;
   document.getElementById('wd-note').style.display='none';
@@ -749,46 +813,35 @@ function addWdPeriod(){
   <div class="wd-period-hdr">
     <div class="wd-period-num">${num}</div>
     <input class="wd-period-name" type="text" value="Period ${num}" placeholder="Period name">
-    <div class="wd-period-dur">
-      <input type="number" min="1" placeholder="yrs" class="wd-dur-yrs" oninput="syncPeriodDur(this,'yrs');checkPctTotal(this);" title="Number of years for this period">
-      <span>or</span>
-      <select class="wd-dur-sel" onchange="syncPeriodDur(this,'sel');checkPctTotal(this);">
-        <option value="">— pick —</option>
-        <option value="depleted" selected>Until depleted</option>
-      </select>
-    </div>
     <button class="rmbtn" onclick="removeWdPeriod(this)" title="Remove period">×</button>
   </div>
-  <div class="wd-alloc-hdrs"><span>Account</span><span style="text-align:center;">% of net need</span><span></span></div>
-  <div class="wd-allocs">
-    <div class="wd-alloc-row">
-      <select class="wd-acct-sel" onchange="checkPctTotal(this)">${acctOpts}</select>
-      <input type="number" class="pct-input wd-pct" min="0" max="100" placeholder="100" oninput="checkPctTotal(this)">
-      <button class="rmbtn" onclick="removeAllocRow(this)">×</button>
-    </div>
-  </div>
+  <div class="wd-alloc-hdrs"><span>Account</span><span style="text-align:center;">% of need</span><span>Duration</span><span></span></div>
+  <div class="wd-allocs"></div>
   <button class="btn-link" onclick="addAllocRow(this)" style="margin-top:4px;">+ Add account</button>
   <div class="pct-total pct-ok" id="pct-total-${d.id}" style="margin-top:6px;">Total: 0% of net need</div>
-  <div class="wd-fallback-note">If any account runs dry mid-period, its share is automatically covered by the other accounts in this period. When all period accounts are exhausted, remaining need is drawn from accounts not yet in the schedule.</div>`;
+  <div class="wd-fallback-note">Period ends when the shortest account duration expires. If an account depletes early, others absorb its share. When all accounts are done, the next period begins.</div>`;
   container.appendChild(d);
+  // Add first account row
+  const allocsEl=d.querySelector('.wd-allocs');
+  allocsEl.appendChild(makeAllocRow(acctOpts,100,null,'depleted'));
+  checkPctTotal(d.querySelector('.wd-pct'));
   renumberPeriods();
 }
 
 function addAllocRow(btn){
-  const allocs=btn.previousElementSibling.previousElementSibling;
   const period=btn.closest('.wd-period');
+  const allocs=period.querySelector('.wd-allocs');
   const currentTotal=[...period.querySelectorAll('.wd-pct')].reduce((s,i)=>s+(parseFloat(i.value)||0),0);
   if(currentTotal>=100){
     const totalEl=period.querySelector('[id^="pct-total-"]');
-    if(totalEl){totalEl.className='pct-total pct-warn';totalEl.textContent='Already at 100% — cannot add another account to this period.';}
+    if(totalEl){totalEl.className='pct-total pct-warn';totalEl.textContent='Already at 100% — cannot add another account.';}
     return;
   }
   const remaining=Math.round(100-currentTotal);
   const acctOpts=getAcctNames().map(n=>`<option>${n}</option>`).join('');
-  const d=document.createElement('div');d.className='wd-alloc-row';
-  d.innerHTML=`<select class="wd-acct-sel" onchange="checkPctTotal(this)">${acctOpts}</select><input type="number" class="pct-input wd-pct" min="0" max="${remaining}" value="${remaining}" oninput="checkPctTotal(this)"><button class="rmbtn" onclick="removeAllocRow(this)">×</button>`;
-  allocs.appendChild(d);
-  checkPctTotal(d.querySelector('.wd-pct'));
+  const row=makeAllocRow(acctOpts,remaining,null,'depleted');
+  allocs.appendChild(row);
+  checkPctTotal(row.querySelector('.wd-pct'));
 }
 
 function removeAllocRow(btn){
@@ -992,7 +1045,15 @@ function readConfig(){
       customReturn:ins[2]?.value!==''&&ins[2]?.value!==undefined?parseFloat(ins[2].value):null
     };
   });
-  const contribs=[...document.querySelectorAll('#contrib-entries .ri')].map(r=>{const sels=r.querySelectorAll('select');const ins=r.querySelectorAll('input');const stopStr=sels[1]?.options[sels[1].selectedIndex]?.text||'At retirement';const stopAge=stopStr==='At retirement'?ret:parseInt(stopStr.match(/\d+/)?.[0])||ret;return{account:sels[0]?.options[sels[0].selectedIndex]?.text,annual:parseFloat(ins[0]?.value)||0,match:parseFloat(ins[1]?.value)||0,stopAt:stopAge};});
+  const contribs=[...document.querySelectorAll('#contrib-entries .ri')].map(r=>{
+    const acctSel=r.querySelector('select');
+    const ins=r.querySelectorAll('input[type=number]');
+    const chk=r.querySelector('.contrib-stop-ret');
+    const ageIn=r.querySelector('.contrib-stop-age');
+    const stopAtRet=chk?chk.checked:true;
+    const stopAge=stopAtRet?ret:(parseInt(ageIn?.value)||ret);
+    return{account:acctSel?.options[acctSel.selectedIndex]?.text,annual:parseFloat(ins[0]?.value)||0,match:parseFloat(ins[1]?.value)||0,stopAt:stopAge};
+  });
   const filingPeriods=[...document.querySelectorAll('.filing-row')].map((fp,i)=>{const sel=fp.querySelector('.fp-sel');const ageIn=fp.querySelector('input[type=number]');return{fromAge:i===0?cur:parseInt(ageIn?.value)||cur,status:sel?.value||'mfj',stdDed:DEDV[sel?.value]||32200};});
   const ssStart=parseInt(document.getElementById('ss-start').value);
   const ssAmt=parseFloat(document.getElementById('ss-amt').value);
@@ -1018,18 +1079,15 @@ function readConfig(){
 
   // Read withdrawal periods
   const wdPeriods=[...document.querySelectorAll('.wd-period')].map(p=>{
-    const yrsEl=p.querySelector('.wd-dur-yrs');
-    const selEl=p.querySelector('.wd-dur-sel');
-    const yrsVal=parseInt(yrsEl?.value)||0;
-    const selVal=selEl?.value||'indefinite';
-    const durType=yrsVal>0?'years':'depleted';
-    const durYears=yrsVal>0?yrsVal:null;
     const allocs=[...p.querySelectorAll('.wd-alloc-row')].map(row=>{
-      const acct=row.querySelector('.wd-acct-sel')?.options[row.querySelector('.wd-acct-sel').selectedIndex]?.text||'';
+      const acctSel=row.querySelector('.wd-acct-sel');
+      const acct=acctSel?.options[acctSel.selectedIndex]?.text||'';
       const pct=parseFloat(row.querySelector('.wd-pct')?.value)||0;
-      return{account:acct,pct};
+      const yrsVal=parseInt(row.querySelector('.wd-row-yrs')?.value)||0;
+      const durType=yrsVal>0?'years':'depleted';
+      return{account:acct,pct,durType,durYears:yrsVal>0?yrsVal:null,elapsed:0};
     }).filter(a=>a.account&&a.pct>0);
-    return{name:p.querySelector('.wd-period-name')?.value||'Period',durType,durYears,allocs,elapsed:0};
+    return{name:p.querySelector('.wd-period-name')?.value||'Period',allocs,elapsed:0};
   });
 
   const oneTimeEvents=[...document.querySelectorAll('#one-time-events > div')].map(d=>{
@@ -1114,7 +1172,7 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
   if(netWd<=0)return{accts,wdState,wdByType:{tradIRA:0,roth:0,taxable:0,cash:0},acctWd:{}};
   let rem=netWd;
   const wdByType={tradIRA:0,roth:0,taxable:0,cash:0};
-  const acctWd={}; // per-account withdrawal amounts by name
+  const acctWd={};
 
   function typeKey(type){
     if(type==='Tax-deferred')return'tradIRA';
@@ -1122,12 +1180,10 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
     if(type==='Taxable LTCG')return'taxable';
     return'cash';
   }
-
   function findAcct(name){
     const n=name.trim().toLowerCase();
     return accts.findIndex(ac=>ac.name.trim().toLowerCase()===n);
   }
-
   function takeFrom(idx,amount){
     if(idx<0||accts[idx].balance<=0)return 0;
     const take=Math.min(amount,accts[idx].balance);
@@ -1139,17 +1195,15 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
 
   const periods=wdState.periods;
 
-  // Find active period — skip periods that are exhausted
-  function isPeriodDone(p){
-    if(p.durType==='years')return p.elapsed>=p.durYears;
-    if(p.durType==='depleted'){
-      // All accounts in this period must be dry to consider it done
-      return p.allocs.every(a=>{const idx=findAcct(a.account);return idx<0||accts[idx].balance<=0;});
-    }
+  // Period is done when all its allocs are done
+  function isAllocDone(a){
+    if(a.done)return true;
+    if(a.durType==='depleted'){const idx=findAcct(a.account);return idx<0||accts[idx].balance<=0;}
     return false;
   }
+  function isPeriodDone(p){return p.allocs.every(a=>isAllocDone(a));}
 
-  // Find the first non-done period
+  // Find first non-done period
   let activePeriodIdx=-1;
   for(let i=0;i<periods.length;i++){
     if(!isPeriodDone(periods[i])){activePeriodIdx=i;break;}
@@ -1157,43 +1211,56 @@ function withdrawFromSchedule(accts,netWd,wdState,cfg){
 
   if(activePeriodIdx>=0){
     const period=periods[activePeriodIdx];
-    const allocations=period.allocs.filter(a=>a.pct>0&&findAcct(a.account)>=0);
+    // Active allocs = not done AND have balance
+    const activeAllocs=period.allocs.filter(a=>{
+      if(isAllocDone(a))return false;
+      const idx=findAcct(a.account);
+      return idx>=0&&accts[idx].balance>0;
+    });
 
-    if(allocations.length>0){
+    if(activeAllocs.length>0){
+      const totalActivePct=activeAllocs.reduce((s,a)=>s+a.pct,0)||100;
       let remaining=rem;
       let iterations=0;
       while(remaining>0.01&&iterations<20){
         iterations++;
-        const available=allocations.map(a=>accts[findAcct(a.account)]?.balance||0);
+        const active2=period.allocs.filter(a=>!isAllocDone(a)&&(()=>{const idx=findAcct(a.account);return idx>=0&&accts[idx].balance>0;})());
+        if(active2.length===0)break;
+        const totPct=active2.reduce((s,a)=>s+a.pct,0)||100;
+        const available=active2.map(a=>{const idx=findAcct(a.account);return accts[idx]?.balance||0;});
         const totalAvail=available.reduce((s,v)=>s+v,0);
         if(totalAvail<=0)break;
-        // Each account takes its pct share, capped by its available balance
-        const targets=allocations.map((a,i)=>Math.min(remaining*(a.pct/100),available[i]));
+        const targets=active2.map((a,i)=>Math.min(remaining*(a.pct/totPct),available[i]));
         const taken=targets.reduce((s,v)=>s+v,0);
-        if(taken<=0)break;
-        targets.forEach((take,i)=>takeFrom(findAcct(allocations[i].account),take));
+        if(taken<=0.001)break;
+        targets.forEach((take,i)=>takeFrom(findAcct(active2[i].account),take));
         remaining-=taken;
       }
       rem=Math.max(0,remaining);
     }
 
-    // Advance elapsed for fixed-year periods
-    if(period.durType==='years')period.elapsed=(period.elapsed||0)+1;
+    // Advance elapsed for each alloc and mark done if duration expired
+    period.allocs.forEach(a=>{
+      if(a.done)return;
+      if(a.durType==='years'){
+        a.elapsed=(a.elapsed||0)+1;
+        if(a.elapsed>=a.durYears)a.done=true;
+      } else {
+        const idx=findAcct(a.account);
+        if(idx<0||accts[idx].balance<=0)a.done=true;
+      }
+    });
   }
 
-  // Fallback: if rem remains, draw from accounts NOT in any scheduled period
+  // Fallback: draw from accounts not in the schedule
   if(rem>0.01){
     const allScheduledNames=new Set((cfg.wdPeriods||[]).flatMap(p=>p.allocs.map(a=>a.account.trim().toLowerCase())));
-    // First pass: unscheduled accounts
     for(let i=0;i<accts.length&&rem>0.01;i++){
       if(allScheduledNames.size>0&&allScheduledNames.has(accts[i].name.trim().toLowerCase()))continue;
       rem-=takeFrom(i,rem);
     }
-    // Second pass: any account (all scheduled ones depleted)
     if(rem>0.01){
-      for(let i=0;i<accts.length&&rem>0.01;i++){
-        rem-=takeFrom(i,rem);
-      }
+      for(let i=0;i<accts.length&&rem>0.01;i++)rem-=takeFrom(i,rem);
     }
   }
 
@@ -1262,8 +1329,9 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   let tax=0,prev=0,marginalRate=0;
   for(const[top,rate]of brackets){
     if(taxable<=prev)break;
-    tax+=Math.min(taxable-prev,top-prev)*rate;
-    if(taxable>prev)marginalRate=rate; // track the highest bracket reached
+    const taxableInBracket=Math.min(taxable-prev,top-prev);
+    tax+=taxableInBracket*rate;
+    if(taxableInBracket>0)marginalRate=rate;
     prev=top;
   }
 
@@ -1291,7 +1359,18 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
 }
 
 function makeWdState(cfg){
-  return{periods:(cfg.wdPeriods||[]).map(p=>({...p,elapsed:0})),currentPeriod:0};
+  return{periods:(cfg.wdPeriods||[]).map(p=>({
+    ...p,
+    elapsed:0,
+    allocs:p.allocs.map(a=>({
+      ...a,
+      elapsed:0,
+      done:false,
+      // If alloc has no durType (legacy format), inherit from period level
+      durType:a.durType||(p.durType||'depleted'),
+      durYears:a.durYears!==undefined?a.durYears:p.durYears
+    }))
+  })),currentPeriod:0};
 }
 
 function simulate(cfg,scenario,offset=0,crashes=[]){
@@ -1879,11 +1958,11 @@ function exportSettings(){
     // Also save raw withdrawal period allocs with names since readConfig processes them
     wdPeriodsRaw:[...document.querySelectorAll('.wd-period')].map(p=>({
       name:p.querySelector('.wd-period-name')?.value||'Period',
-      durYrs:p.querySelector('.wd-dur-yrs')?.value||'',
-      durSel:p.querySelector('.wd-dur-sel')?.value||'depleted',
       allocs:[...p.querySelectorAll('.wd-alloc-row')].map(r=>({
         account:r.querySelector('.wd-acct-sel')?.options[r.querySelector('.wd-acct-sel').selectedIndex]?.text||'',
-        pct:r.querySelector('.wd-pct')?.value||''
+        pct:parseFloat(r.querySelector('.wd-pct')?.value)||0,
+        durType:parseInt(r.querySelector('.wd-row-yrs')?.value)>0?'years':'depleted',
+        durYears:parseInt(r.querySelector('.wd-row-yrs')?.value)||null
       }))
     }))
   };
@@ -1950,9 +2029,21 @@ function applySettings(s){
     const acctNames=(s.accounts||[]).map(a=>a.name);
     s.contribs.forEach(c=>{
       const opts=acctNames.map(n=>`<option${n===c.account?' selected':''}>${n}</option>`).join('');
-      const stopOpts=['At retirement','Age 60','Age 62','Age 65','Age 70'].map(o=>`<option${o===c.stopAt||String(c.stopAt)===o?' selected':''}>${o}</option>`).join('');
+      const stopAtRet=!c.stopAt||c.stopAt===ret||(s.basic&&c.stopAt===(s.basic.retAge||65));
       const d=document.createElement('div');d.className='ri contrib';
-      d.innerHTML=`<select>${opts}</select><input type="number" value="${c.annual||''}"><input type="number" value="${c.match||''}"><select>${stopOpts}</select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+      d.style.gridTemplateColumns='1fr 95px 95px 140px 24px';
+      const acctSel=document.createElement('select');acctSel.innerHTML=opts;
+      const annIn=document.createElement('input');annIn.type='number';annIn.value=c.annual||'';
+      const matchIn=document.createElement('input');matchIn.type='number';matchIn.value=c.match||'';
+      const stopWrap=document.createElement('div');stopWrap.style.cssText='display:flex;align-items:center;gap:5px;';
+      const chk=document.createElement('input');chk.type='checkbox';chk.className='contrib-stop-ret';chk.checked=stopAtRet;chk.style.cssText='width:auto;cursor:pointer;flex-shrink:0;';
+      const chkLbl=document.createElement('span');chkLbl.textContent='Ret.';chkLbl.style.cssText='font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer;';chkLbl.onclick=()=>{chk.checked=!chk.checked;chk.dispatchEvent(new Event('change'));};
+      const ageIn=document.createElement('input');ageIn.type='number';ageIn.className='contrib-stop-age';ageIn.placeholder='age';ageIn.style.cssText='width:52px;text-align:center;display:'+(stopAtRet?'none':'block')+';';
+      if(!stopAtRet)ageIn.value=c.stopAt||'';
+      chk.addEventListener('change',()=>{ageIn.style.display=chk.checked?'none':'block';chkLbl.style.opacity=chk.checked?'1':'0.4';});
+      stopWrap.appendChild(chk);stopWrap.appendChild(chkLbl);stopWrap.appendChild(ageIn);
+      const btn=document.createElement('button');btn.className='rmbtn';btn.textContent='×';btn.onclick=()=>d.remove();
+      [acctSel,annIn,matchIn,stopWrap,btn].forEach(el=>d.appendChild(el));
       document.getElementById('contrib-entries').appendChild(d);
     });
   }
@@ -2045,30 +2136,39 @@ function applySettings(s){
       document.getElementById('one-time-events').appendChild(d);
     });
   }
-  // Withdrawal periods
+  // Withdrawal periods — rebuild using new per-account duration UI
   document.getElementById('wd-periods').innerHTML='';
   wdPeriodCount=0;
+  // Support both new format (s.wdPeriods with per-alloc dur) and legacy (s.wdPeriodsRaw with period-level dur)
   const rawPeriods=s.wdPeriodsRaw||[];
-  if(rawPeriods.length){
+  const newPeriods=s.wdPeriods||[];
+  const periodsToLoad=newPeriods.length?newPeriods:rawPeriods;
+  if(periodsToLoad.length){
     document.getElementById('wd-note').style.display='none';
-    rawPeriods.forEach((p,idx)=>{
+    periodsToLoad.forEach((p,idx)=>{
       wdPeriodCount++;
       const container=document.getElementById('wd-periods');
       if(idx>0){const c=document.createElement('div');c.className='wd-conn';c.textContent='then ↓';container.appendChild(c);}
-      const acctOpts=(s.accounts||[]).map(a=>`<option>${a.name}</option>`).join('');
       const num=idx+1;
       const d=document.createElement('div');d.className='wd-period';d.id='wdp-'+wdPeriodCount;
-      const allocRows=p.allocs.map(a=>{
-        const aopts=(s.accounts||[]).map(ac=>`<option${ac.name===a.account?' selected':''}>${ac.name}</option>`).join('');
-        return `<div class="wd-alloc-row"><select class="wd-acct-sel" onchange="checkPctTotal(this)">${aopts}</select><input type="number" class="pct-input wd-pct" min="0" max="100" value="${a.pct}" oninput="checkPctTotal(this)"><button class="rmbtn" onclick="removeAllocRow(this)">×</button></div>`;
-      }).join('');
-      const totalPct=p.allocs.reduce((s,a)=>s+(parseFloat(a.pct)||0),0);
-      const pctOk=Math.abs(totalPct-100)<0.01||totalPct===0;
-      d.innerHTML=`<div class="wd-period-hdr"><div class="wd-period-num">${num}</div><input class="wd-period-name" type="text" value="${esc(p.name)}"><div class="wd-period-dur"><input type="number" min="1" value="${p.durYrs}" placeholder="yrs" class="wd-dur-yrs" oninput="syncPeriodDur(this,'yrs');checkPctTotal(this);" ${p.durYrs?'':''}><span>or</span><select class="wd-dur-sel" onchange="syncPeriodDur(this,'sel');checkPctTotal(this);"><option value="">— pick —</option><option value="depleted"${p.durSel==='depleted'?' selected':''}>Until depleted</option></select></div><button class="rmbtn" onclick="removeWdPeriod(this)">×</button></div><div class="wd-alloc-hdrs"><span>Account</span><span style="text-align:center;">% of net need</span><span></span></div><div class="wd-allocs">${allocRows}</div><button class="btn-link" onclick="addAllocRow(this)" style="margin-top:4px;">+ Add account</button><div class="pct-total ${pctOk?'pct-ok':'pct-warn'}" id="pct-total-wdp-${wdPeriodCount}" style="margin-top:6px;">Total: ${totalPct.toFixed(0)}% of net need</div><div class="wd-fallback-note">If any account runs dry mid-period, its share is automatically covered by the other accounts in this period.</div>`;
+      d.innerHTML=`<div class="wd-period-hdr"><div class="wd-period-num">${num}</div><input class="wd-period-name" type="text" value="${esc(p.name||'Period '+num)}"><button class="rmbtn" onclick="removeWdPeriod(this)">×</button></div><div class="wd-alloc-hdrs"><span>Account</span><span style="text-align:center;">% of need</span><span>Duration</span><span></span></div><div class="wd-allocs"></div><button class="btn-link" onclick="addAllocRow(this)" style="margin-top:4px;">+ Add account</button><div class="pct-total pct-ok" id="pct-total-wdp-${wdPeriodCount}" style="margin-top:6px;"></div><div class="wd-fallback-note">Period ends when the shortest account duration expires. If an account depletes early, others absorb its share.</div>`;
       container.appendChild(d);
-      // Sync duration controls
-      if(p.durYrs){const sel=d.querySelector('.wd-dur-sel');if(sel)sel.classList.add('greyed');}
-      else if(p.durSel){const yrs=d.querySelector('.wd-dur-yrs');if(yrs)yrs.classList.add('greyed');}
+      const allocsEl=d.querySelector('.wd-allocs');
+      const acctNames=(s.accounts||[]).map(a=>a.name);
+      // Handle both new per-alloc format and legacy format
+      const allocs=p.allocs||[];
+      allocs.forEach(a=>{
+        const acctOpts=acctNames.map(n=>`<option${n===a.account?' selected':''}>${n}</option>`).join('');
+        // Determine duration: alloc-level (new) or period-level (legacy)
+        const durYrs=a.durYears||(p.durYrs?parseInt(p.durYrs):null);
+        const durType=a.durType||(p.durSel||'depleted');
+        const row=makeAllocRow(acctOpts,a.pct,durYrs&&durType==='years'?durYrs:null,durType);
+        // Set account selection
+        const acctSel=row.querySelector('.wd-acct-sel');
+        if(acctSel){[...acctSel.options].forEach(o=>{if(o.text===a.account)o.selected=true;});}
+        allocsEl.appendChild(row);
+      });
+      checkPctTotal(d.querySelector('.wd-pct'));
     });
   } else {
     document.getElementById('wd-note').style.display='';
