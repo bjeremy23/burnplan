@@ -1335,27 +1335,31 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
     prev=top;
   }
 
-  // LTCG tax on taxable account withdrawals (simplified: 0%/15%/20% based on ordinary income)
+  // LTCG tax on taxable account withdrawals (0%/15%/20% based on ordinary income)
   const ltcgGain=wdByType.taxable;
+  let ltcgTax=0;
   if(ltcgGain>0){
     const ltcgRate=ordIncome>553850?0.20:ordIncome>89250?0.15:0;
-    tax+=ltcgGain*ltcgRate;
+    ltcgTax=ltcgGain*ltcgRate;
+    tax+=ltcgTax;
   }
 
   const marginalBracket=taxable>0?Math.round(marginalRate*100):0;
 
-  // Conv Tax = actual incremental tax caused by the conversion
-  // = total tax WITH conversion minus what tax would be WITHOUT conversion
+  // Conv Tax = incremental ordinary income tax from the conversion only
+  // We isolate just the bracket tax difference, keeping LTCG tax constant
   let rothTaxCost=0;
   if(roth&&roth.amount>0){
     const ordIncomeWithoutConv=Math.max(0,ordIncome-roth.amount);
     const taxableWithoutConv=Math.max(0,ordIncomeWithoutConv-fp.stdDed);
-    let taxWithoutConv=0,prev2=0;
-    for(const[top,rate]of brackets){if(taxableWithoutConv<=prev2)break;taxWithoutConv+=Math.min(taxableWithoutConv-prev2,top-prev2)*rate;prev2=top;}
-    rothTaxCost=Math.max(0,Math.round(tax-taxWithoutConv));
+    let bracketTaxWithoutConv=0,prev2=0;
+    for(const[top,rate]of brackets){if(taxableWithoutConv<=prev2)break;bracketTaxWithoutConv+=Math.min(taxableWithoutConv-prev2,top-prev2)*rate;prev2=top;}
+    // Conv tax = difference in bracket tax only (LTCG tax is not caused by conversion)
+    const bracketTaxWithConv=tax-ltcgTax;
+    rothTaxCost=Math.max(0,Math.round(bracketTaxWithConv-bracketTaxWithoutConv));
   }
 
-  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ssIncome,ss2Income,otherIncome,rmd,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
+  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ltcgTax:Math.round(ltcgTax),ssIncome,ss2Income,otherIncome,rmd,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
 }
 
 function makeWdState(cfg){
