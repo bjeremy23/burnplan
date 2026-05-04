@@ -90,7 +90,7 @@ select option{background:var(--surface2)}
 .ri{display:grid;gap:7px;align-items:center;margin-bottom:7px}
 .ri.acct{grid-template-columns:1fr 110px 130px 90px 24px}
 .ri.contrib{grid-template-columns:1fr 95px 95px 100px 24px}
-.ri.roth{grid-template-columns:65px 65px 1fr 100px 24px}
+.ri.roth{grid-template-columns:65px 65px 1fr 24px}
 .ri.crash{grid-template-columns:75px 65px 95px 1fr 24px}
 .colhdr{display:grid;gap:7px;margin-bottom:4px}
 .colhdr span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
@@ -344,10 +344,10 @@ td.dep{color:var(--red)}
 <div class="panel">
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Roth conversions <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Select your marginal tax bracket — the app computes the estimated dollar tax cost.</p>
-    <div class="colhdr roth" style="display:grid;grid-template-columns:65px 65px 1fr 100px 24px;gap:7px;"><span>From age</span><span>To age</span><span>Annual amount ($)</span><span>Tax bracket</span><span></span></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Enter the age range and annual amount. The tax cost is automatically calculated using your marginal bracket for that year, based on all income sources. Shown in the projections table as conversion amount, tax cost, and marginal bracket.</p>
+    <div class="colhdr roth" style="display:grid;grid-template-columns:65px 65px 1fr 24px;gap:7px;"><span>From age</span><span>To age</span><span>Annual amount ($)</span><span></span></div>
     <div id="roth-entries">
-      <div class="ri roth"><input type="number" value="35" placeholder="From age"><input type="number" value="35" placeholder="To age"><input type="number" placeholder="$/yr"><select><option>10%</option><option>12%</option><option>22%</option><option selected>24%</option><option>32%</option><option>35%</option><option>37%</option></select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div>
+      <div class="ri roth"><input type="number" value="35" placeholder="From age"><input type="number" value="35" placeholder="To age"><input type="number" placeholder="$/yr"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div>
     </div>
     <button class="btn-link" onclick="addRoth()">+ Add conversion period</button>
     <p class="info-note">Tax cost = conversion amount × bracket %. Shown in table as amount, bracket %, and computed $ cost.</p>
@@ -698,7 +698,7 @@ function addIncome(){
 function addRoth(){
   const curAge=parseInt(document.getElementById('cur-age').value)||35;
   const d=document.createElement('div');d.className='ri roth';
-  d.innerHTML=`<input type="number" value="${curAge}" placeholder="From age"><input type="number" value="${curAge}" placeholder="To age"><input type="number" placeholder="$/yr"><select><option>10%</option><option>12%</option><option>22%</option><option selected>24%</option><option>32%</option><option>35%</option><option>37%</option></select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+  d.innerHTML=`<input type="number" value="${curAge}" placeholder="From age"><input type="number" value="${curAge}" placeholder="To age"><input type="number" placeholder="$/yr"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
   document.getElementById('roth-entries').appendChild(d);
 }
 
@@ -1010,7 +1010,10 @@ function readConfig(){
     const taxability=taxSel?.options[taxSel.selectedIndex]?.text||'100% taxable (ordinary income)';
     return{name,startAge,endAge,annualAmt,cola,taxability};
   }).filter(s=>s.startAge&&s.annualAmt);
-  const rothPeriods=[...document.querySelectorAll('#roth-entries .ri')].map(r=>{const ins=r.querySelectorAll('input');const sel=r.querySelector('select');const bracket=parseFloat(sel?.options[sel.selectedIndex]?.text)||24;return{fromAge:parseInt(ins[0]?.value)||0,toAge:parseInt(ins[1]?.value)||0,amount:parseFloat(ins[2]?.value)||0,bracket};}).filter(r=>r.fromAge&&r.amount);
+  const rothPeriods=[...document.querySelectorAll('#roth-entries .ri')].map(r=>{
+    const ins=r.querySelectorAll('input');
+    return{fromAge:parseInt(ins[0]?.value)||0,toAge:parseInt(ins[1]?.value)||0,amount:parseFloat(ins[2]?.value)||0};
+  }).filter(r=>r.fromAge&&r.amount);
 
   // Read withdrawal periods
   const wdPeriods=[...document.querySelectorAll('.wd-period')].map(p=>{
@@ -1081,7 +1084,11 @@ function getOtherIncome(age,streams,curAge){
     taxability:s.taxability
   }));
 }
-function getRoth(age,periods){const p=periods.find(r=>age>=r.fromAge&&age<=r.toAge);if(!p||!p.amount)return null;return{amount:p.amount,bracket:p.bracket,taxCost:Math.round(p.amount*p.bracket/100)};}
+function getRoth(age,periods){
+  const p=periods.find(r=>age>=r.fromAge&&age<=r.toAge);
+  if(!p||!p.amount)return null;
+  return{amount:p.amount};
+}
 function getRMD(bal,age){if(bal<=0)return 0;return bal/(IRS[Math.min(age,95)]||8.9);}
 function getWdTarget(age,sc,ret,infl){
   // Spend target grows with inflation each year from retirement age
@@ -1267,7 +1274,8 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   }
 
   const marginalBracket=taxable>0?Math.round(marginalRate*100):0;
-  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ssIncome,ss2Income,otherIncome,rmd,roth,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
+  const rothTaxCost=roth?Math.round(roth.amount*marginalRate):0;
+  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ssIncome,ss2Income,otherIncome,rmd,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
 }
 
 function makeWdState(cfg){
@@ -1995,9 +2003,8 @@ function applySettings(s){
   const rothToLoad=s.rothPeriods?.length?s.rothPeriods:s.wdPeriods?[]:[{fromAge:s.basic?.curAge||35,toAge:s.basic?.curAge||35,amount:0,bracket:24}];
   rothToLoad.forEach(r=>{
     if(!r.fromAge)return;
-    const bOpts=[10,12,22,24,32,35,37].map(b=>`<option${b===r.bracket?' selected':''}>${b}%</option>`).join('');
     const d=document.createElement('div');d.className='ri roth';
-    d.innerHTML=`<input type="number" value="${r.fromAge}"><input type="number" value="${r.toAge}"><input type="number" value="${r.amount||''}"><select>${bOpts}</select><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
+    d.innerHTML=`<input type="number" value="${r.fromAge}"><input type="number" value="${r.toAge}"><input type="number" value="${r.amount||''}"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button>`;
     document.getElementById('roth-entries').appendChild(d);
   });
   // One-time events
