@@ -345,6 +345,7 @@ td.dep{color:var(--red)}
   <div class="panel-hdr open" onclick="togglePanel(this)"><div class="panel-title">Roth conversions <span class="badge badge-opt">optional</span></div><span class="chev open">▼</span></div>
   <div class="panel-body">
     <p style="font-size:12px;color:var(--muted);margin-bottom:9px;">Enter the age range and annual amount. The tax cost is automatically calculated using your marginal bracket for that year, based on all income sources. Shown in the projections table as conversion amount, tax cost, and marginal bracket.</p>
+    <p class="info-note">The <strong>Conv Tax</strong> column in projections shows the portion of your total tax bill attributable to the conversion. It is already included in the <strong>Est. Tax (incl. conv)</strong> column — it is not an additional charge on top.</p>
     <div class="colhdr roth" style="display:grid;grid-template-columns:65px 65px 1fr 24px;gap:7px;"><span>From age</span><span>To age</span><span>Annual amount ($)</span><span></span></div>
     <div id="roth-entries">
       <div class="ri roth"><input type="number" value="35" placeholder="From age"><input type="number" value="35" placeholder="To age"><input type="number" placeholder="$/yr"><button class="rmbtn" onclick="this.closest('.ri').remove()">×</button></div>
@@ -1274,7 +1275,18 @@ function simulateYear(state,age,cfg,wdAmt,offset,crashDrop,wdState,recoveryBoost
   }
 
   const marginalBracket=taxable>0?Math.round(marginalRate*100):0;
-  const rothTaxCost=roth?Math.round(roth.amount*marginalRate):0;
+
+  // Conv Tax = actual incremental tax caused by the conversion
+  // = total tax WITH conversion minus what tax would be WITHOUT conversion
+  let rothTaxCost=0;
+  if(roth&&roth.amount>0){
+    const ordIncomeWithoutConv=Math.max(0,ordIncome-roth.amount);
+    const taxableWithoutConv=Math.max(0,ordIncomeWithoutConv-fp.stdDed);
+    let taxWithoutConv=0,prev2=0;
+    for(const[top,rate]of brackets){if(taxableWithoutConv<=prev2)break;taxWithoutConv+=Math.min(taxableWithoutConv-prev2,top-prev2)*rate;prev2=top;}
+    rothTaxCost=Math.max(0,Math.round(tax-taxWithoutConv));
+  }
+
   return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ssIncome,ss2Income,otherIncome,rmd,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState};
 }
 
@@ -1482,7 +1494,7 @@ function buildDetailTable(rows,cfg,view){
   if(hasEvents)th+='<th>One-time event</th>';
   th+='<th>Spend target</th><th>From portfolio</th><th>RMD (additional)</th>';
   if(hasRoth)th+='<th>Roth Conv</th><th>Conv Tax</th>';
-  th+='<th>Marginal bracket</th><th>Est. Tax</th></tr>';
+  th+='<th>Marginal bracket</th><th>Est. Tax (incl. conv)</th></tr>';
   document.getElementById('proj-thead').innerHTML=th;
   let tb='';let prevPhase=null;
   rows.forEach(r=>{
