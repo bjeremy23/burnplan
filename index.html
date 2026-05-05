@@ -170,6 +170,10 @@ td.dep{color:var(--red)}
 .spend-step-last{grid-template-columns:1fr 140px;border-color:var(--accent2)}
 .spend-step-hdrs{display:grid;grid-template-columns:1fr 110px 24px;gap:7px;margin-bottom:5px}
 .spend-step-hdrs span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.fullscreen-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;padding:16px;}
+.fullscreen-overlay .table-wrap{flex:1;overflow:auto;}
+.fullscreen-overlay table{width:100%;}
+.fullscreen-close{position:fixed;top:12px;right:16px;z-index:10000;}
 .empty-state{padding:40px;text-align:center;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
 </style>
 </head>
@@ -479,8 +483,8 @@ td.dep{color:var(--red)}
         <div class="chart-canvas-wrap"><canvas id="main-chart"></canvas></div>
       </div>
       <div class="chart-wrap" id="income-chart-wrap" style="display:none;">
-        <div class="chart-title">Income streams vs portfolio withdrawal <span style="display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportPNG('income-chart')">PNG</button></span></div>
-        <div class="chart-canvas-wrap" style="height:200px;"><canvas id="income-chart"></canvas></div>
+        <div class="chart-title">Income streams vs portfolio withdrawal <span style="display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportPNG('income-chart')">PNG</button><button class="btn btn-sm" onclick="incomeChartFullscreen()">Full screen</button></span></div>
+        <div class="chart-canvas-wrap" style="height:200px;" id="income-chart-canvas-wrap"><canvas id="income-chart"></canvas></div>
       </div>
     </div>
     <div class="sub-tab" id="sub-balances">
@@ -495,11 +499,16 @@ td.dep{color:var(--red)}
         <span style="font-size:11px;color:var(--faint);">Ad space — 728×90 leaderboard</span>
       </div>
     </div>
-    <div class="table-wrap" style="margin-top:14px;">
-      <div style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 11px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:7px 7px 0 0;border-bottom:none;">
-        ⚠ <strong style="color:#fbbf24;">Est. Tax is a simplified federal income tax estimate only.</strong> It uses standard deduction and progressive brackets but does not include state taxes, Medicare surtax, AMT, itemized deductions, or other adjustments. <strong style="color:#fbbf24;">Conv Tax</strong> shows the bracket tax cost of Roth conversions. <strong style="color:#fbbf24;">LTCG Tax</strong> shows capital gains tax on taxable account withdrawals. Both are already included in Est. Tax. Not a substitute for professional tax advice.
+    <div class="table-wrap" style="margin-top:14px;" id="proj-detail-wrap">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:8px 11px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:7px 7px 0 0;border-bottom:none;">
+        <div style="font-size:11px;color:var(--muted);font-style:italic;flex:1;">
+          ⚠ <strong style="color:#fbbf24;">Est. Tax is a simplified federal income tax estimate only.</strong> It uses standard deduction and progressive brackets but does not include state taxes, Medicare surtax, AMT, itemized deductions, or other adjustments. <strong style="color:#fbbf24;">Conv Tax</strong> shows the bracket tax cost of Roth conversions. <strong style="color:#fbbf24;">LTCG Tax</strong> shows capital gains tax on taxable account withdrawals. Both are already included in Est. Tax. Not a substitute for professional tax advice.
+        </div>
+        <button class="btn btn-sm" onclick="detailTableFullscreen()" style="flex-shrink:0;margin-left:12px;">Full screen</button>
       </div>
-      <table><thead id="proj-thead"></thead><tbody id="proj-tbody"></tbody></table>
+      <div id="proj-detail-table-inner">
+        <table><thead id="proj-thead"></thead><tbody id="proj-tbody"></tbody></table>
+      </div>
     </div>
   </div>
 </div>
@@ -2263,6 +2272,69 @@ function applySettings(s){
 }
 
 function esc(str){return(str||'').replace(/"/g,'\u0026quot;').replace(/</g,'\u0026lt;').replace(/>/g,'\u0026gt;');}
+
+
+function detailTableFullscreen(){
+  const existing=document.getElementById('detail-fs-overlay');
+  if(existing){
+    const inner=document.getElementById('proj-detail-table-inner');
+    inner.style.cssText='';
+    document.getElementById('proj-detail-wrap').appendChild(inner);
+    existing.remove();
+    return;
+  }
+  const inner=document.getElementById('proj-detail-table-inner');
+  const overlay=document.createElement('div');
+  overlay.id='detail-fs-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;padding:16px;box-sizing:border-box;';
+  const bar=document.createElement('div');
+  bar.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-shrink:0;';
+  const title=document.createElement('span');
+  title.textContent='Year-by-year projections';
+  title.style.cssText='font-size:14px;font-weight:500;';
+  const closeBtn=document.createElement('button');
+  closeBtn.className='btn';
+  closeBtn.textContent='Exit full screen';
+  closeBtn.onclick=function(){detailTableFullscreen();};
+  bar.appendChild(title);
+  bar.appendChild(closeBtn);
+  inner.style.cssText='flex:1;overflow:auto;min-height:0;';
+  overlay.appendChild(bar);
+  overlay.appendChild(inner);
+  document.body.appendChild(overlay);
+}
+
+function incomeChartFullscreen(){
+  const existing=document.getElementById('income-fs-overlay');
+  if(existing){
+    const wrap=document.getElementById('income-chart-canvas-wrap');
+    wrap.style.cssText='height:200px;';
+    document.getElementById('income-chart-wrap').appendChild(wrap);
+    existing.remove();
+    if(charts['income-chart'])charts['income-chart'].resize();
+    return;
+  }
+  const wrap=document.getElementById('income-chart-canvas-wrap');
+  const overlay=document.createElement('div');
+  overlay.id='income-fs-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;padding:16px;box-sizing:border-box;';
+  const bar=document.createElement('div');
+  bar.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0;';
+  const title=document.createElement('span');
+  title.textContent='Income streams vs portfolio withdrawal';
+  title.style.cssText='font-size:14px;font-weight:500;';
+  const closeBtn=document.createElement('button');
+  closeBtn.className='btn';
+  closeBtn.textContent='Exit full screen';
+  closeBtn.onclick=function(){incomeChartFullscreen();};
+  bar.appendChild(title);
+  bar.appendChild(closeBtn);
+  wrap.style.cssText='flex:1;height:auto;position:relative;min-height:0;';
+  overlay.appendChild(bar);
+  overlay.appendChild(wrap);
+  document.body.appendChild(overlay);
+  if(charts['income-chart'])charts['income-chart'].resize();
+}
 
 updateMode();
 renderSaved();
