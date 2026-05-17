@@ -1346,12 +1346,10 @@ function simulateYear(state,age,cfg,wdAmt,yr,offset,crashDrop,wdState,recoveryBo
   const otherIncome=getOtherIncome(age,cfg.incomeStreams,cfg.cur);
   const totalIncome=ssIncome+ss2Income+otherIncome.reduce((s,i)=>s+i.amount,0);
   const tradIdx=accts.findIndex(a=>a.type==='Tax-deferred');
-  let rmd=0;
+  // Calculate RMD requirement for the year (before any withdrawals)
+  let rmdRequired=0;
   if(age>=cfg.rmdAge&&tradIdx>=0){
-    // RMD is a forced distribution ON TOP of the spend target — not subtracted from it
-    rmd=Math.min(getRMD(accts[tradIdx].balance,age),accts[tradIdx].balance);
-    accts[tradIdx].balance=Math.max(0,accts[tradIdx].balance-rmd);
-    // Track RMD in wdByType so it gets taxed correctly
+    rmdRequired=Math.min(getRMD(accts[tradIdx].balance,age),accts[tradIdx].balance);
   }
   const roth=getRoth(age,cfg.rothPeriods);
   if(roth){
@@ -1360,17 +1358,19 @@ function simulateYear(state,age,cfg,wdAmt,yr,offset,crashDrop,wdState,recoveryBo
     const ti=accts.findIndex(a=>a.type==='Tax-free (Roth)');
     if(fi>=0&&ti>=0){const amt=Math.min(roth.amount,accts[fi].balance);accts[fi].balance-=amt;accts[ti].balance+=amt;}
   }
-  // SS and income apply first; withdrawal schedule covers the remaining spend need
-  // RMD and Roth conversions happen separately on top
+  // Calculate withdrawal needed after other income sources
   const netWd=Math.max(0,wdAmt-totalIncome);
-  const result=withdrawFromSchedule(accts,netWd,wdState,cfg);
+  // RMD counts toward withdrawal obligation: if you're withdrawing >= RMD for spending, no additional withdrawal needed
+  // Otherwise, you need to withdraw the difference
+  const additionalRMD=Math.max(0,rmdRequired-netWd);
+  const totalWdFromSchedule=netWd+additionalRMD;
+  const result=withdrawFromSchedule(accts,totalWdFromSchedule,wdState,cfg);
   const finalAccts=result.accts;
   const wdByType=result.wdByType||{tradIRA:0,roth:0,taxable:0,cash:0};
 
-  // Ordinary income = trad IRA withdrawals + RMD + roth conversion + SS taxable + other income
-  // RMD came out of trad IRA separately, so add it explicitly to ordinary income
+  // Ordinary income = trad IRA withdrawals (already includes additionalRMD) + roth conversion + SS taxable + other income
   // Also include any one-time withdrawals from tax-deferred accounts
-  let ordIncome=(wdByType.tradIRA||0)+(otWd.tradIRA||0)+rmd+(roth?roth.amount:0);
+  let ordIncome=(wdByType.tradIRA||0)+(otWd.tradIRA||0)+(roth?roth.amount:0);
 
   // SS: taxable portion (both SS streams)
   const ssTaxPct=cfg.ss?parseFloat(cfg.ss.taxability)||85:0;
@@ -1422,7 +1422,7 @@ function simulateYear(state,age,cfg,wdAmt,yr,offset,crashDrop,wdState,recoveryBo
     rothTaxCost=Math.max(0,Math.round(bracketTaxWithConv-bracketTaxWithoutConv));
   }
 
-  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ltcgTax:Math.round(ltcgTax),ssIncome,ss2Income,otherIncome,rmd,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState,oneTimeWdByType};
+  return{accts:finalAccts,tax:Math.round(tax),marginalBracket,ltcgTax:Math.round(ltcgTax),ssIncome,ss2Income,otherIncome,rmd:additionalRMD,roth:roth?{...roth,taxCost:rothTaxCost}:null,netWithdrawal:netWd,totalIncome,wdByType,acctWd:result.acctWd||{},wdState:result.wdState,oneTimeWdByType};
 }
 
 function makeWdState(cfg){
